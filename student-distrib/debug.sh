@@ -1,11 +1,11 @@
 #!/bin/sh
 
 if [ -d /mnt/tmpmp3 ]; then
-rmdir /mnt/tmpmp3
+    rmdir /mnt/tmpmp3
 fi
 
 if [ -d /tmp/mp3 ]; then
-rm -rf /tmp/mp3
+    rm -rf /tmp/mp3
 fi
 
 mkdir /mnt/tmpmp3
@@ -20,4 +20,3 @@ umount /mnt/tmpmp3
 cp -f /tmp/mp3/mp3.img ./
 rm -rf /tmp/mp3
 rmdir /mnt/tmpmp3
-

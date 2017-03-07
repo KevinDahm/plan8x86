@@ -33,4 +33,3 @@ void
 send_eoi(uint32_t irq_num)
 {
 }
-
