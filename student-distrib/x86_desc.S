@@ -1,4 +1,4 @@
-# x86_desc.S - Set up x86 segment descriptors, descriptor tables 
+# x86_desc.S - Set up x86 segment descriptors, descriptor tables
 # vim:ts=4 noexpandtab
 
 #define ASM     1
@@ -34,16 +34,18 @@ _tss:
     .endr
 tss_bottom:
 
+
+  ## GDT
     .align  16
 gdt:
 _gdt:
 
     # First GDT entry cannot be used
     .quad 0
-    
+
     # NULL entry
     .quad 0
-    
+
     # Segmentation will not be used
     # CS and DS both are 0-4GB r/w segments
     #
@@ -60,7 +62,7 @@ _gdt:
     # | Base 15:0                          | Segment Limit 15:0              |
     # |                                    |                                 |
     # |----------------------------------------------------------------------|
-    
+
 gdt_ptr:
     # Set up an entry for kernel CS
     .quad 0x00CF9A000000FFFF
@@ -83,20 +85,30 @@ ldt_desc_ptr:
     .quad 0
 
 gdt_bottom:
+  ## GDT
 
+
+  ## LDT
     .align 16
 ldt:
     .rept 4
     .quad 0
     .endr
 ldt_bottom:
+  ## LDT
+
+
 
 .align 4
     .word 0 # Padding
 idt_desc_ptr:
-    .word idt_bottom - idt - 1
-    .long idt
-    
+    .word idt_bottom - idt - 1   	# Size of the gdt table declared above
+	  .long idt                     # Pointer to gdt
+
+    .word 0 # Padding
+gdt_desc:
+    .word gdt_bottom - gdt - 1   # Size of the gdt table declared above
+    .long gdt                    # Pointer to gdt
 
     .align  16
 idt:
