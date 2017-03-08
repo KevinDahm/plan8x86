@@ -20,6 +20,6 @@ struct pt_regs {
     int xss;
 };
 
-__attribute__((fastcall)) extern unsigned int do_IRQ(const struct pt_regs* regs);
+__attribute__((fastcall)) extern void do_IRQ(const struct pt_regs* regs);
 
 #endif

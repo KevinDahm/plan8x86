@@ -146,16 +146,54 @@ entry (unsigned long magic, unsigned long addr)
     }
 
     {
-        SET_IDT_ENTRY(idt[0], div0);
+        // Exceptions
+        SET_IDT_ENTRY(idt[0], irq0);
+        SET_IDT_ENTRY(idt[1], irq1);
+        SET_IDT_ENTRY(idt[2], irq2);
+        SET_IDT_ENTRY(idt[3], irq3);
+        SET_IDT_ENTRY(idt[4], irq4);
+        SET_IDT_ENTRY(idt[5], irq5);
+        SET_IDT_ENTRY(idt[6], irq6);
+        SET_IDT_ENTRY(idt[7], irq7);
+        SET_IDT_ENTRY(idt[8], irq8);
+        SET_IDT_ENTRY(idt[9], irq9);
+        SET_IDT_ENTRY(idt[10], irq10);
+        SET_IDT_ENTRY(idt[11], irq11);
+        SET_IDT_ENTRY(idt[12], irq12);
+        SET_IDT_ENTRY(idt[13], irq13);
+        SET_IDT_ENTRY(idt[14], irq14);
+        SET_IDT_ENTRY(idt[15], irq15);
+        SET_IDT_ENTRY(idt[16], irq16);
+        SET_IDT_ENTRY(idt[17], irq17);
+        SET_IDT_ENTRY(idt[18], irq18);
+        SET_IDT_ENTRY(idt[19], irq19);
+        SET_IDT_ENTRY(idt[20], irq20);
+        SET_IDT_ENTRY(idt[21], irq21);
+        SET_IDT_ENTRY(idt[22], irq22);
+        SET_IDT_ENTRY(idt[23], irq23);
+        SET_IDT_ENTRY(idt[24], irq24);
+        SET_IDT_ENTRY(idt[25], irq25);
+        SET_IDT_ENTRY(idt[26], irq26);
+        SET_IDT_ENTRY(idt[27], irq27);
+        SET_IDT_ENTRY(idt[28], irq28);
+        SET_IDT_ENTRY(idt[29], irq29);
+        SET_IDT_ENTRY(idt[30], irq30);
+        SET_IDT_ENTRY(idt[31], irq31);
+
+        // PIC
+        SET_IDT_ENTRY(idt[32], irq32); // Timer chip
+        SET_IDT_ENTRY(idt[33], irq33); // Keyboard
+
+        SET_IDT_ENTRY(idt[128], irq128); // System calls
+        idt[128].dpl = 3;
+
         lidt(idt_desc_ptr);
     }
-
-    sti();
 
     /* int x = 10 / 0; */
 
     /* Init the PIC */
-    /* i8259_init(); */
+    i8259_init();
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
@@ -166,9 +204,12 @@ entry (unsigned long magic, unsigned long addr)
      * without showing you any output */
     /*printf("Enabling Interrupts\n");
       sti();*/
+    sti();
 
     /* Execute the first program (`shell') ... */
 
+    while (1) {}
+
     /* Spin (nicely, so we don't chew up cycles) */
-    asm volatile(".1: hlt; jmp .1;");
+    /* asm volatile(".1: hlt; jmp .1;"); */
 }
