@@ -30,10 +30,8 @@ common_interrupt:
   SAVE_ALL
 	movl %esp, %ecx
 	call do_IRQ
-	jmp ret_from_intr
-
-ret_from_intr:
 	RESTORE_ALL
+  addl $4, %esp
 	iret
 
 

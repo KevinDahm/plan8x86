@@ -155,12 +155,12 @@ entry (unsigned long magic, unsigned long addr)
         SET_IDT_ENTRY(idt[5], irq5);
         SET_IDT_ENTRY(idt[6], irq6);
         SET_IDT_ENTRY(idt[7], irq7);
-        SET_IDT_ENTRY(idt[8], irq8);
+        /* SET_IDT_ENTRY(idt[8], irq8); */
         SET_IDT_ENTRY(idt[9], irq9);
         SET_IDT_ENTRY(idt[10], irq10);
         SET_IDT_ENTRY(idt[11], irq11);
         SET_IDT_ENTRY(idt[12], irq12);
-        SET_IDT_ENTRY(idt[13], irq13);
+        /* SET_IDT_ENTRY(idt[13], irq13); */
         SET_IDT_ENTRY(idt[14], irq14);
         SET_IDT_ENTRY(idt[15], irq15);
         SET_IDT_ENTRY(idt[16], irq16);
@@ -182,9 +182,9 @@ entry (unsigned long magic, unsigned long addr)
 
         // PIC
         SET_IDT_ENTRY(idt[32], irq32); // Timer chip
-        SET_IDT_ENTRY(idt[33], irq33); // Keyboard
+        /* SET_IDT_ENTRY(idt[33], irq33); // Keyboard */
 
-        SET_IDT_ENTRY(idt[128], irq128); // System calls
+        /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
         idt[128].dpl = 3;
 
         lidt(idt_desc_ptr);
@@ -202,9 +202,9 @@ entry (unsigned long magic, unsigned long addr)
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    /*printf("Enabling Interrupts\n");
-      sti();*/
+    printf("Enabling Interrupts\n");
     sti();
+    /* sti(); */
 
     /* Execute the first program (`shell') ... */
 
