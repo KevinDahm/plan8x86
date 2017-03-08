@@ -7,8 +7,8 @@
 
 /* Interrupt masks to determine which interrupts
  * are enabled and disabled */
-uint8_t master_mask; /* IRQs 0-7 */
-uint8_t slave_mask; /* IRQs 8-15 */
+uint8_t master_mask = 0xFF; /* IRQs 0-7 */
+uint8_t slave_mask = 0xFF; /* IRQs 8-15 */
 
 /* Initialize the 8259 PIC */
 void
@@ -38,21 +38,6 @@ enable_irq(uint32_t irq_num)
 {
     if(irq_num < 8){ //Line on master
         //Disable bit #irq_num
-        master_mask |= 1 << irq_num;
-        outb(master_mask, MASTER_8259_PORT + 1);
-    }else{ //Line on slave
-        //Disable bit #irq_num % 8
-        slave_mask |= 1 << (irq_num - 8);
-        outb(slave_mask, SLAVE_8259_PORT + 1);
-    }
-}
-
-/* Disable (mask) the specified IRQ */
-void
-disable_irq(uint32_t irq_num)
-{
-    if(irq_num < 8){ //Line on master
-        //Disable bit #irq_num
         master_mask &= ~(1 << irq_num);
         outb(master_mask, MASTER_8259_PORT + 1);
     }else{ //Line on slave
@@ -62,14 +47,29 @@ disable_irq(uint32_t irq_num)
     }
 }
 
+/* Disable (mask) the specified IRQ */
+void
+disable_irq(uint32_t irq_num)
+{
+    if(irq_num < 8){ //Line on master
+        // Enable bit #irq_num
+        master_mask |= (1 << irq_num);
+        outb(master_mask, MASTER_8259_PORT + 1);
+    }else{ //Line on slave
+        // Enable bit #irq_num % 8
+        slave_mask |= (1 << (irq_num - 8));
+        outb(slave_mask, SLAVE_8259_PORT + 1);
+    }
+}
+
 /* Send end-of-interrupt signal for the specified IRQ */
 void
 send_eoi(uint32_t irq_num)
 {
     //EOI | irq_num tells the PIC that irq_num was handled
-    if(irq_num < 8){
-        outb(EOI | irq_num, MASTER_8259_PORT);
-    }else{
-        outb(EOI | (irq_num-8), SLAVE_8259_PORT);
+    // TODO: Do we or EOI with irq_num? Check piaza?
+    outb(EOI, MASTER_8259_PORT);
+    if(irq_num >= 8){
+        outb(EOI, SLAVE_8259_PORT);
     }
 }
