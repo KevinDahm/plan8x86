@@ -34,7 +34,7 @@ common_interrupt:
   addl $4, %esp
 	iret
 
-
+// TODO rename these to hex and cli?
 .globl irq0
 irq0:
   pushl $0xFFFFFFFF
