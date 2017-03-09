@@ -21,7 +21,7 @@ typedef struct __attribute__((packed)) page_dir_kb_entry{
 typedef struct __attribute__((packed)) page_dir_mb_entry{
     uint32_t addr : 10;
     uint32_t reserved : 9;
-    utin32_t pgTblAttIdx : 1;
+    uint32_t pgTblAttIdx : 1;
     uint32_t avail : 3;
     uint32_t global : 1;
     uint32_t pageSize : 1;
@@ -50,5 +50,6 @@ typedef struct __attribute__((packed)) page_table_kb_entry{
 
 
 extern void initPaging();
+
 
 #endif // PAGE_H
