@@ -18,6 +18,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
+    int i;
     multiboot_info_t *mbi;
 
     /* Clear the screen. */
@@ -146,60 +147,53 @@ entry (unsigned long magic, unsigned long addr)
     }
 
     {
+        // If an interrupt is generated that we haven't setup complain
+        for (i = 0; i < NUM_VEC; i++) {
+            set_intr_gate(i, ignore_int);
+        }
+
         // Exceptions
-        SET_IDT_ENTRY(idt[0], irq0);
-        SET_IDT_ENTRY(idt[1], irq1);
-        SET_IDT_ENTRY(idt[2], irq2);
-        SET_IDT_ENTRY(idt[3], irq3);
-        SET_IDT_ENTRY(idt[4], irq4);
-        SET_IDT_ENTRY(idt[5], irq5);
-        SET_IDT_ENTRY(idt[6], irq6);
-        SET_IDT_ENTRY(idt[7], irq7);
-        SET_IDT_ENTRY(idt[8], irq8);
-        SET_IDT_ENTRY(idt[9], irq9);
-        SET_IDT_ENTRY(idt[10], irq10);
-        SET_IDT_ENTRY(idt[11], irq11);
-        SET_IDT_ENTRY(idt[12], irq12);
-        SET_IDT_ENTRY(idt[13], irq13);
-        SET_IDT_ENTRY(idt[14], irq14);
-        SET_IDT_ENTRY(idt[15], irq15);
-        SET_IDT_ENTRY(idt[16], irq16);
-        SET_IDT_ENTRY(idt[17], irq17);
-        SET_IDT_ENTRY(idt[18], irq18);
-        SET_IDT_ENTRY(idt[19], irq19);
-        SET_IDT_ENTRY(idt[20], irq20);
-        SET_IDT_ENTRY(idt[21], irq21);
-        SET_IDT_ENTRY(idt[22], irq22);
-        SET_IDT_ENTRY(idt[23], irq23);
-        SET_IDT_ENTRY(idt[24], irq24);
-        SET_IDT_ENTRY(idt[25], irq25);
-        SET_IDT_ENTRY(idt[26], irq26);
-        SET_IDT_ENTRY(idt[27], irq27);
-        SET_IDT_ENTRY(idt[28], irq28);
-        SET_IDT_ENTRY(idt[29], irq29);
-        SET_IDT_ENTRY(idt[30], irq30);
-        SET_IDT_ENTRY(idt[31], irq31);
+        set_trap_gate(0, divide_error);
+        set_trap_gate(1, debug);
+        set_intr_gate(2, nmi);
+        set_system_intr_gate(3, int3);
+        set_system_gate(4, overflow);
+        set_system_gate(5, bounds);
+        set_trap_gate(6, invalid_op);
+        set_trap_gate(7, device_not_available);
+        set_trap_gate(8, double_fault);
+        set_trap_gate(9, coprocessor_segment_overrun);
+        set_trap_gate(10, invalid_TSS);
+        set_trap_gate(11, segment_not_present);
+        set_trap_gate(12, stack_segment);
+        set_trap_gate(13, general_protection);
+        set_intr_gate(14, page_fault);
+        set_trap_gate(16, coprocessor_error);
+        set_trap_gate(17, alignment_check);
+        set_trap_gate(18, machine_check);
+        set_trap_gate(19, simd_coprocessor_error);
+        set_system_gate(128, system_call);
 
         // PIC
-        SET_IDT_ENTRY(idt[32], irq32); // Timer chip
-        SET_IDT_ENTRY(idt[33], irq33); // Keyboard
-        SET_IDT_ENTRY(idt[34], irq34);
-        SET_IDT_ENTRY(idt[35], irq35);
-        SET_IDT_ENTRY(idt[36], irq36);
-        SET_IDT_ENTRY(idt[37], irq37);
-        SET_IDT_ENTRY(idt[38], irq38);
-        SET_IDT_ENTRY(idt[39], irq39);
-        SET_IDT_ENTRY(idt[40], irq40);
-        SET_IDT_ENTRY(idt[41], irq41);
-        SET_IDT_ENTRY(idt[42], irq42);
-        SET_IDT_ENTRY(idt[43], irq43);
-        SET_IDT_ENTRY(idt[44], irq44);
-        SET_IDT_ENTRY(idt[45], irq45);
-        SET_IDT_ENTRY(idt[46], irq46);
-        SET_IDT_ENTRY(idt[47], irq47);
+        /* SET_IDT_ENTRY(idt[32], irq32); // Timer chip */
+        /* SET_IDT_ENTRY(idt[33], irq33); // Keyboard */
+        /* SET_IDT_ENTRY(idt[34], irq34); */
+        /* SET_IDT_ENTRY(idt[35], irq35); */
+        /* SET_IDT_ENTRY(idt[36], irq36); */
+        /* SET_IDT_ENTRY(idt[37], irq37); */
+        /* SET_IDT_ENTRY(idt[38], irq38); */
+        /* SET_IDT_ENTRY(idt[39], irq39); */
+        /* SET_IDT_ENTRY(idt[40], irq40); */
+        /* SET_IDT_ENTRY(idt[41], irq41); */
+        /* SET_IDT_ENTRY(idt[42], irq42); */
+        /* SET_IDT_ENTRY(idt[43], irq43); */
+        /* SET_IDT_ENTRY(idt[44], irq44); */
+        /* SET_IDT_ENTRY(idt[45], irq45); */
+        /* SET_IDT_ENTRY(idt[46], irq46); */
+        /* SET_IDT_ENTRY(idt[47], irq47); */
 
-        SET_IDT_ENTRY(idt[128], irq128); // System calls
-        idt[128].dpl = 3;
+        /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
+        /* idt[128].dpl = 3; */
 
         lidt(idt_desc_ptr);
     }
@@ -209,21 +203,21 @@ entry (unsigned long magic, unsigned long addr)
     /* Init the PIC */
     i8259_init();
     /* enable_irq(0); */
-    enable_irq(1);
-    enable_irq(2);
-    enable_irq(3);
-    enable_irq(4);
-    enable_irq(5);
-    enable_irq(6);
-    enable_irq(7);
-    enable_irq(8);
-    enable_irq(9);
-    enable_irq(10);
-    enable_irq(11);
-    enable_irq(12);
-    enable_irq(13);
-    enable_irq(14);
-    enable_irq(15);
+    /* enable_irq(1); */
+    /* enable_irq(2); */
+    /* enable_irq(3); */
+    /* enable_irq(4); */
+    /* enable_irq(5); */
+    /* enable_irq(6); */
+    /* enable_irq(7); */
+    /* enable_irq(8); */
+    /* enable_irq(9); */
+    /* enable_irq(10); */
+    /* enable_irq(11); */
+    /* enable_irq(12); */
+    /* enable_irq(13); */
+    /* enable_irq(14); */
+    /* enable_irq(15); */
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
@@ -235,7 +229,7 @@ entry (unsigned long magic, unsigned long addr)
     printf("Enabling Interrupts\n");
     sti();
 
-    /* int x = 10 / 0; */
+    int x = 10 / 0;
 
     /* Execute the first program (`shell') ... */
 
