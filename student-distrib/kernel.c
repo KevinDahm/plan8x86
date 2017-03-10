@@ -197,34 +197,49 @@ entry (unsigned long magic, unsigned long addr)
 
     lidt(idt_desc_ptr);
 
-    /* int x = 10 / 0; */
+    outb(0xAD, 0x60);
+    while (!(inb(0x64) & 0x1)) {}
+
+    inb(0x60); // Flush the output buffer
+
+    // Set the controller configuration byte
+    uint8_t ccb = inb(0x20);
+    ccb &= 0xBC; // Clear bit 0, 1, and 6
+    outb(ccb, 0x60);
+    while (!(inb(0x64) & 0x1)) {}
+
+    // Ask keyboard to perform self test.
+    /* outb(0xAA, 0x60); */
+    /* while (!(inb(0x64) & 0x1)) {} */
+    /* uint8_t c = inb(0x60); */
+    /* printf("0x%x", c); */
+    /* if (inb(0x60) != 0x55) { */
+    /*     asm volatile("int $8"); */
+    /* } */
+
+    // Perform interface tests
+    /* uint8_t c; */
+    /* do { */
+    /*     outb(0xAB, 0x60); */
+    /*     while (!(inb(0x64) & 0x1)) {} */
+    /*     c = inb(0x60); */
+    /*     printf("0x%x", c); */
+    /* } while (c == 0xFE); */
+    /* if (inb(0x60) != 0x00) { */
+    /*     asm volatile("int $10"); */
+    /* } */
+
+    // Enable the keyboard
+    outb(0xAE, 0x60);
+    while (!(inb(0x64) & 0x1)) {}
 
     /* Init the PIC */
     i8259_init();
-    enable_irq(0);
-    /* enable_irq(1); */
-    /* enable_irq(2); */
-    /* enable_irq(3); */
-    /* enable_irq(4); */
-    /* enable_irq(5); */
-    /* enable_irq(6); */
-    /* enable_irq(7); */
-    /* enable_irq(8); */
-    /* enable_irq(9); */
-    /* enable_irq(10); */
-    /* enable_irq(11); */
-    /* enable_irq(12); */
-    /* enable_irq(13); */
-    /* enable_irq(14); */
-    /* enable_irq(15); */
+    /* enable_irq(0); */
+    enable_irq(1);
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
-
-//Paging Setup
-    clear_tables();
-    create_entries();
-    init_paging();
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
