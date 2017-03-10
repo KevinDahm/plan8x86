@@ -7,6 +7,7 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
+#include "page.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -149,6 +150,11 @@ entry (unsigned long magic, unsigned long addr)
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
+
+//Paging Setup
+    clear_tables();
+    create_entries();
+    init_paging();
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your

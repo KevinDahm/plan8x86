@@ -1,4 +1,4 @@
-#ifdef PAGE_H
+#ifndef PAGE_H
 #define PAGE_H
 #include "types.h"
 
@@ -17,6 +17,7 @@ typedef struct __attribute__((packed)) page_dir_kb_entry{
     uint32_t readWrite  : 1;
     uint32_t present : 1;
 } page_dir_kb_entry_t;
+
 
 typedef struct __attribute__((packed)) page_dir_mb_entry{
     uint32_t addr : 10;
@@ -48,8 +49,15 @@ typedef struct __attribute__((packed)) page_table_kb_entry{
     uint32_t present : 1;
 } page_table_kb_entry_t;
 
+uint32_t page_directory_table[DIR_SIZE] __attribute__((aligned (0x100)));
 
-extern void initPaging();
+uint32_t page_table[DIR_SIZE] __attribute__((aligned (0x100)));
 
+
+extern void init_paging();
+
+extern void clear_tables();
+
+extern void create_entries();
 
 #endif // PAGE_H
