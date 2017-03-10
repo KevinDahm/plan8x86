@@ -201,7 +201,7 @@ entry (unsigned long magic, unsigned long addr)
 
     /* Init the PIC */
     i8259_init();
-    enable_irq(0);
+    /* enable_irq(0); */
     /* enable_irq(1); */
     /* enable_irq(2); */
     /* enable_irq(3); */

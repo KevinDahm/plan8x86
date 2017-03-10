@@ -10,13 +10,13 @@ void init_paging(){
     asm volatile("              \n\
     movl    %0, %%cr3           \n\
                                 \n\
-    movl    %%cr0, %%eax        \n\
-    orl     $0x80000001, %%eax  \n\
-    movl    %%eax, %%cr0        \n\
-                                \n\
     movl    %%cr4, %%eax        \n\
     orl     $0x00000010, %%eax  \n\
     movl    %%eax, %%cr4        \n\
+                                \n\
+    movl    %%cr0, %%eax        \n\
+    orl     $0x80000001, %%eax  \n\
+    movl    %%eax, %%cr0        \n\
     "
     : /* no outputs */
     : "a"(page_directory_table)
@@ -24,8 +24,8 @@ void init_paging(){
 }
 
 void clear_tables() {
-    memset(page_directory_table, 0, DIR_SIZE * 4);
-    memset(page_table, 0, DIR_SIZE * 4);
+    memset(page_directory_table, 2, DIR_SIZE * 4);
+    memset(page_table, 2, DIR_SIZE * 4);
 }
 
 void create_entries() {
@@ -61,8 +61,8 @@ void create_entries() {
     mb_dir_entry->reserved = 0;
     mb_dir_entry->pgTblAttIdx = 0;
     mb_dir_entry->avail = 0;
-    mb_dir_entry->global = 0;
-    mb_dir_entry->pageSize = 0;
+    mb_dir_entry->global = 1;
+    mb_dir_entry->pageSize = 1;
     mb_dir_entry->reserved = 0;
     mb_dir_entry->accessed = 0;
     mb_dir_entry->cacheDisabled = 0;
@@ -70,4 +70,9 @@ void create_entries() {
     mb_dir_entry->userSupervisor = 0;
     mb_dir_entry->readWrite = 1;
     mb_dir_entry->present = 1;
+
+    /* printf("Entry 0: %x\n", page_directory_table[0]); */
+    /* printf("Entry 0->0xB8: %x\n", page_table[0xB8]); */
+    /* printf("Entry 1: %x\n", page_directory_table[1]); */
+    /* printf("Entry 2: %x\n", page_directory_table[2]); */
 }
