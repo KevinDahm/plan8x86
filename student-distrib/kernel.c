@@ -224,7 +224,7 @@ entry (unsigned long magic, unsigned long addr)
 //Paging Setup
     clear_tables();
     create_entries();
-    init_paging();
+    init_paging();      //Enable paging AFTER tables set up
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
