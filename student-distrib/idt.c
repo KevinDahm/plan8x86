@@ -207,5 +207,5 @@ void irq_0x1_handler(int dev_id) {
         }
     } while (1);
 
-    printf("%x", c);
+    printf("0x%x", c);
 }

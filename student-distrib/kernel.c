@@ -196,12 +196,46 @@ entry (unsigned long magic, unsigned long addr)
 
     lidt(idt_desc_ptr);
 
-    /* int x = 10 / 0; */
+    outb(0xAD, 0x60); // Disable the keyboard
+    while (!(inb(0x64) & 0x1)) {}
+
+    inb(0x60); // Flush the output buffer
+
+    // Set the controller configuration byte
+    uint8_t ccb = inb(0x20);
+    ccb &= 0xBC; // Clear bit 0, 1, and 6
+    outb(ccb, 0x60);
+    while (!(inb(0x64) & 0x1)) {}
+
+    // Ask keyboard to perform self test.
+    /* outb(0xAA, 0x60); */
+    /* while (!(inb(0x64) & 0x1)) {} */
+    /* uint8_t c = inb(0x60); */
+    /* printf("0x%x", c); */
+    /* if (inb(0x60) != 0x55) { */
+    /*     asm volatile("int $8"); */
+    /* } */
+
+    // Perform interface tests
+    /* uint8_t c; */
+    /* do { */
+    /*     outb(0xAB, 0x60); */
+    /*     while (!(inb(0x64) & 0x1)) {} */
+    /*     c = inb(0x60); */
+    /*     printf("0x%x", c); */
+    /* } while (c == 0xFE); */
+    /* if (inb(0x60) != 0x00) { */
+    /*     asm volatile("int $10"); */
+    /* } */
+
+    // Enable the keyboard
+    outb(0xAE, 0x60);
+    while (!(inb(0x64) & 0x1)) {}
 
     /* Init the PIC */
     i8259_init();
-    enable_irq(0);
-    /* enable_irq(1); */
+    /* enable_irq(0); */
+    enable_irq(1);
     /* enable_irq(2); */
     /* enable_irq(3); */
     /* enable_irq(4); */
@@ -224,7 +258,7 @@ entry (unsigned long magic, unsigned long addr)
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    printf("Enabling Interrupts\n");
+    /* printf("Enabling Interrupts\n"); */
     sti();
 
     /* Execute the first program (`shell') ... */
