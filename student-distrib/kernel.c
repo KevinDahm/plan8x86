@@ -7,6 +7,8 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
+#include "entry.h"
+#include "idt.h"
 #include "page.h"
 
 /* Macros. */
@@ -18,6 +20,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
+    int i;
     multiboot_info_t *mbi;
 
     /* Clear the screen. */
@@ -145,8 +148,75 @@ entry (unsigned long magic, unsigned long addr)
         ltr(KERNEL_TSS);
     }
 
+    // If an interrupt is generated that we haven't setup complain
+    for (i = 0; i < NUM_VEC; i++) {
+        set_intr_gate(i, ignore_int);
+    }
+
+    // Exceptions
+    set_trap_gate(0, divide_error);
+    set_trap_gate(1, debug);
+    set_intr_gate(2, nmi);
+    set_system_intr_gate(3, int3);
+    set_system_gate(4, overflow);
+    set_system_gate(5, bounds);
+    set_trap_gate(6, invalid_op);
+    set_trap_gate(7, device_not_available);
+    set_trap_gate(8, double_fault);
+    set_trap_gate(9, coprocessor_segment_overrun);
+    set_trap_gate(10, invalid_TSS);
+    set_trap_gate(11, segment_not_present);
+    set_trap_gate(12, stack_segment);
+    set_trap_gate(13, general_protection);
+    set_intr_gate(14, page_fault);
+    set_trap_gate(16, coprocessor_error);
+    set_trap_gate(17, alignment_check);
+    set_trap_gate(18, machine_check);
+    set_trap_gate(19, simd_coprocessor_error);
+    set_system_gate(128, system_call);
+
+    // PIC
+    irqaction rtc_handler;
+    rtc_handler.handle = irq_0x0_handler;
+    rtc_handler.dev_id = 0x20;
+    rtc_handler.next = NULL;
+
+    irq_desc[0x0] = &rtc_handler;
+    set_intr_gate(0x20, irq_0x0);
+
+    irqaction keyboard_handler;
+    keyboard_handler.handle = irq_0x1_handler;
+    keyboard_handler.dev_id = 0x21;
+    keyboard_handler.next = NULL;
+
+    irq_desc[0x1] = &keyboard_handler;
+    set_intr_gate(0x21, irq_0x1);
+
+    /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
+    /* idt[128].dpl = 3; */
+
+    lidt(idt_desc_ptr);
+
+    /* int x = 10 / 0; */
+
     /* Init the PIC */
     i8259_init();
+    enable_irq(0);
+    /* enable_irq(1); */
+    /* enable_irq(2); */
+    /* enable_irq(3); */
+    /* enable_irq(4); */
+    /* enable_irq(5); */
+    /* enable_irq(6); */
+    /* enable_irq(7); */
+    /* enable_irq(8); */
+    /* enable_irq(9); */
+    /* enable_irq(10); */
+    /* enable_irq(11); */
+    /* enable_irq(12); */
+    /* enable_irq(13); */
+    /* enable_irq(14); */
+    /* enable_irq(15); */
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
@@ -160,8 +230,8 @@ entry (unsigned long magic, unsigned long addr)
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    /*printf("Enabling Interrupts\n");
-      sti();*/
+    printf("Enabling Interrupts\n");
+    sti();
 
     /* Execute the first program (`shell') ... */
 
