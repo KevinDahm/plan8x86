@@ -45,4 +45,21 @@ extern void do_machine_check();
 extern void do_simd_coprocessor_error();
 extern void do_system_call();
 
+extern void irq_0x0();
+extern void irq_0x1();
+extern void irq_0x2();
+extern void irq_0x3();
+extern void irq_0x4();
+extern void irq_0x5();
+extern void irq_0x6();
+extern void irq_0x7();
+extern void irq_0x8();
+extern void irq_0x9();
+extern void irq_0xA();
+extern void irq_0xB();
+extern void irq_0xC();
+extern void irq_0xD();
+extern void irq_0xE();
+extern void irq_0xF();
+
 #endif

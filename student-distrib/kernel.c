@@ -8,6 +8,7 @@
 #include "i8259.h"
 #include "debug.h"
 #include "entry.h"
+#include "idt.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -146,63 +147,60 @@ entry (unsigned long magic, unsigned long addr)
         ltr(KERNEL_TSS);
     }
 
-    {
-        // If an interrupt is generated that we haven't setup complain
-        for (i = 0; i < NUM_VEC; i++) {
-            set_intr_gate(i, ignore_int);
-        }
-
-        // Exceptions
-        set_trap_gate(0, divide_error);
-        set_trap_gate(1, debug);
-        set_intr_gate(2, nmi);
-        set_system_intr_gate(3, int3);
-        set_system_gate(4, overflow);
-        set_system_gate(5, bounds);
-        set_trap_gate(6, invalid_op);
-        set_trap_gate(7, device_not_available);
-        set_trap_gate(8, double_fault);
-        set_trap_gate(9, coprocessor_segment_overrun);
-        set_trap_gate(10, invalid_TSS);
-        set_trap_gate(11, segment_not_present);
-        set_trap_gate(12, stack_segment);
-        set_trap_gate(13, general_protection);
-        set_intr_gate(14, page_fault);
-        set_trap_gate(16, coprocessor_error);
-        set_trap_gate(17, alignment_check);
-        set_trap_gate(18, machine_check);
-        set_trap_gate(19, simd_coprocessor_error);
-        set_system_gate(128, system_call);
-
-        // PIC
-        /* SET_IDT_ENTRY(idt[32], irq32); // Timer chip */
-        /* SET_IDT_ENTRY(idt[33], irq33); // Keyboard */
-        /* SET_IDT_ENTRY(idt[34], irq34); */
-        /* SET_IDT_ENTRY(idt[35], irq35); */
-        /* SET_IDT_ENTRY(idt[36], irq36); */
-        /* SET_IDT_ENTRY(idt[37], irq37); */
-        /* SET_IDT_ENTRY(idt[38], irq38); */
-        /* SET_IDT_ENTRY(idt[39], irq39); */
-        /* SET_IDT_ENTRY(idt[40], irq40); */
-        /* SET_IDT_ENTRY(idt[41], irq41); */
-        /* SET_IDT_ENTRY(idt[42], irq42); */
-        /* SET_IDT_ENTRY(idt[43], irq43); */
-        /* SET_IDT_ENTRY(idt[44], irq44); */
-        /* SET_IDT_ENTRY(idt[45], irq45); */
-        /* SET_IDT_ENTRY(idt[46], irq46); */
-        /* SET_IDT_ENTRY(idt[47], irq47); */
-
-        /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
-        /* idt[128].dpl = 3; */
-
-        lidt(idt_desc_ptr);
+    // If an interrupt is generated that we haven't setup complain
+    for (i = 0; i < NUM_VEC; i++) {
+        set_intr_gate(i, ignore_int);
     }
+
+    // Exceptions
+    set_trap_gate(0, divide_error);
+    set_trap_gate(1, debug);
+    set_intr_gate(2, nmi);
+    set_system_intr_gate(3, int3);
+    set_system_gate(4, overflow);
+    set_system_gate(5, bounds);
+    set_trap_gate(6, invalid_op);
+    set_trap_gate(7, device_not_available);
+    set_trap_gate(8, double_fault);
+    set_trap_gate(9, coprocessor_segment_overrun);
+    set_trap_gate(10, invalid_TSS);
+    set_trap_gate(11, segment_not_present);
+    set_trap_gate(12, stack_segment);
+    set_trap_gate(13, general_protection);
+    set_intr_gate(14, page_fault);
+    set_trap_gate(16, coprocessor_error);
+    set_trap_gate(17, alignment_check);
+    set_trap_gate(18, machine_check);
+    set_trap_gate(19, simd_coprocessor_error);
+    set_system_gate(128, system_call);
+
+    // PIC
+    irqaction rtc_handler;
+    rtc_handler.handle = irq_0x0_handler;
+    rtc_handler.dev_id = 0x20;
+    rtc_handler.next = NULL;
+
+    irq_desc[0x0] = &rtc_handler;
+    set_intr_gate(0x20, irq_0x0);
+
+    irqaction keyboard_handler;
+    keyboard_handler.handle = irq_0x1_handler;
+    keyboard_handler.dev_id = 0x21;
+    keyboard_handler.next = NULL;
+
+    irq_desc[0x1] = &keyboard_handler;
+    set_intr_gate(0x21, irq_0x1);
+
+    /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
+    /* idt[128].dpl = 3; */
+
+    lidt(idt_desc_ptr);
 
     /* int x = 10 / 0; */
 
     /* Init the PIC */
     i8259_init();
-    /* enable_irq(0); */
+    enable_irq(0);
     /* enable_irq(1); */
     /* enable_irq(2); */
     /* enable_irq(3); */
@@ -228,8 +226,6 @@ entry (unsigned long magic, unsigned long addr)
      * without showing you any output */
     printf("Enabling Interrupts\n");
     sti();
-
-    int x = 10 / 0;
 
     /* Execute the first program (`shell') ... */
 
