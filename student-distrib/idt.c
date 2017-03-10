@@ -2,18 +2,6 @@
 #include "i8259.h"
 #include "lib.h"
 
-char getScancode() {
-    char c = 0;
-    do {
-        if (inb(0x60) != c) {
-            c = inb(0x60);
-            if (c > 0) {
-                return c;
-            }
-        }
-    } while (1);
-}
-
 void blue_screen(const char * str) {
     clear();
     // TODO: blue
@@ -101,15 +89,31 @@ void do_system_call() {
     blue_screen("system_call");
 }
 
+// TODO: Make this support threading and preempt_count. See UTLK page 213
 __attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
     int irq = ~(regs->orig_eax);
-    // http://wiki.osdev.org/%228042%22_PS/2_Controller#Translation
-    if (irq == 0x21) {
-        printf("0x%x\n", getScancode());
-    } else if (irq != 0x20) {
-        printf("0x%x\n", irq);
+    irqaction *irq_p = irq_desc[irq];
+    while (irq_p) {
+        (*irq_p->handle)(irq_p->dev_id);
+        irq_p = irq_p->next;
     }
-    if (irq >= 0x20 && irq < 0x30) {
-        send_eoi(irq - 0x20);
-    }
+    send_eoi(irq + 0x20);
+}
+
+void irq_0x0_handler(int dev_id) {
+    test_interrupts();
+}
+
+void irq_0x1_handler(int dev_id) {
+    char c = 0;
+    do {
+        if (inb(0x60) != c) {
+            c = inb(0x60);
+            if (c > 0) {
+                break;
+            }
+        }
+    } while (1);
+
+    printf("%x", c);
 }
