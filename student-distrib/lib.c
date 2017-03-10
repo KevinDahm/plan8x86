@@ -7,7 +7,9 @@
 #define NUM_COLS 80
 #define NUM_ROWS 25
 #define ATTRIB 0x7
+#define BLUE 0x1F
 
+static int color = ATTRIB;
 static int screen_x;
 static int screen_y;
 static char* video_mem = (char *)VIDEO;
@@ -25,8 +27,43 @@ clear(void)
     int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
     }
+}
+
+/*
+ * void blue_screen(void);
+ *   Inputs: void
+ *   Return Value: none
+ *    Function: Clears video memory, sets the color to blue, and resets the cursor
+ */
+
+void blue_screen(void) {
+    set_color(BLUE);
+    clear();
+    set_cursor(0, 0);
+}
+
+/*
+ * void set_cursor(uint32_t x, uint32_t y);
+ *   Inputs: (x, y)
+ *   Return Value: none
+ *    Function: Sets cursor to columnn x, row y
+ */
+
+void set_cursor(uint32_t x, uint32_t y){
+    screen_x = x;
+    screen_y = y;
+}
+/*
+ * void set_color(col);
+ *   Inputs: col - Color to use
+ *   Return Value: none
+ *    Function: Sets future writes to given color
+ */
+
+void set_color(uint8_t col){
+    color = col;
 }
 
 /* Standard printf().
@@ -192,7 +229,7 @@ putc(uint8_t c)
         screen_x=0;
     } else {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
         screen_x++;
         screen_x %= NUM_COLS;
         screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
