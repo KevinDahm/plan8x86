@@ -193,9 +193,20 @@ kbd_t get_key_state() {
 }
 
 int8_t kbd_to_ascii(kbd_t key) {
+    int8_t out;
     if (!key.shift) {
-        return ascii_lookup[key.row][key.col];
+        out = ascii_lookup[key.row][key.col];
     } else {
-        return ascii_shift_lookup[key.row][key.col];
+        out = ascii_shift_lookup[key.row][key.col];
     }
+
+    if (key.capsLock) {
+        if (out >= 'A' && out <= 'Z') {
+            out -= 'A'-'a';
+        } else if (out >= 'a' && out <= 'z') {
+            out -= 'a'-'A';
+        } else {}
+    }
+
+    return out;
 }
