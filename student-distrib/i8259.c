@@ -69,6 +69,6 @@ send_eoi(uint32_t irq_num)
     //EOI | irq_num tells the PIC that irq_num was handled
     outb(EOI | irq_num, MASTER_8259_PORT);
     if(irq_num >= 8){
-        outb(EOI, SLAVE_8259_PORT);
+        outb(EOI | irq_num, SLAVE_8259_PORT);
     }
 }

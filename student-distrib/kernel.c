@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "entry.h"
 #include "idt.h"
-#include "page.h"
+#include "kbd.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -181,11 +181,11 @@ entry (unsigned long magic, unsigned long addr)
     rtc_handler.dev_id = 0x20;
     rtc_handler.next = NULL;
 
-    irq_desc[0x0] = &rtc_handler;
-    set_intr_gate(0x20, irq_0x0);
+    irq_desc[0x8] = &rtc_handler;
+    set_intr_gate(0x28, irq_0x0);
 
     irqaction keyboard_handler;
-    keyboard_handler.handle = irq_0x1_handler;
+    keyboard_handler.handle = do_irq_0x1;
     keyboard_handler.dev_id = 0x21;
     keyboard_handler.next = NULL;
 
@@ -197,46 +197,21 @@ entry (unsigned long magic, unsigned long addr)
 
     lidt(idt_desc_ptr);
 
-    outb(0xAD, 0x60);
-    while (!(inb(0x64) & 0x1)) {}
+    // TODO: Test keyboard on lab machine
 
-    inb(0x60); // Flush the output buffer
-
-    // Set the controller configuration byte
-    uint8_t ccb = inb(0x20);
-    ccb &= 0xBC; // Clear bit 0, 1, and 6
-    outb(ccb, 0x60);
-    while (!(inb(0x64) & 0x1)) {}
-
-    // Ask keyboard to perform self test.
-    /* outb(0xAA, 0x60); */
-    /* while (!(inb(0x64) & 0x1)) {} */
-    /* uint8_t c = inb(0x60); */
-    /* printf("0x%x", c); */
-    /* if (inb(0x60) != 0x55) { */
-    /*     asm volatile("int $8"); */
-    /* } */
-
-    // Perform interface tests
-    /* uint8_t c; */
-    /* do { */
-    /*     outb(0xAB, 0x60); */
-    /*     while (!(inb(0x64) & 0x1)) {} */
-    /*     c = inb(0x60); */
-    /*     printf("0x%x", c); */
-    /* } while (c == 0xFE); */
-    /* if (inb(0x60) != 0x00) { */
-    /*     asm volatile("int $10"); */
-    /* } */
-
-    // Enable the keyboard
-    outb(0xAE, 0x60);
-    while (!(inb(0x64) & 0x1)) {}
+    /* outb(0x8A, 0x70); */
+    /* outb(0x20, 0x71); */
+    /* outb(0x8B, 0x70); */
+    /* char prev = inb(0x71); */
+    /* outb(prev | 0x40, 0x71); */
 
     /* Init the PIC */
     i8259_init();
     /* enable_irq(0); */
     enable_irq(1);
+    /* enable_irq(8); */
+    clear();
+    set_cursor(0, 0);
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */

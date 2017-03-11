@@ -44,7 +44,7 @@ common_interupt:
   call do_IRQ
   RESTORE_ALL
   addl $4, %esp
-iret
+  iret
 
   // TODO: pop any error codes that may exist off the stack
   // NOTE: http://wiki.osdev.org/Exceptions

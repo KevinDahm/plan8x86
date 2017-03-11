@@ -193,19 +193,7 @@ __attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
 }
 
 void irq_0x0_handler(int dev_id) {
+    outb(0x0C, 0x70);
+    inb(0x71);
     test_interrupts();
-}
-
-void irq_0x1_handler(int dev_id) {
-    char c = 0;
-    do {
-        if (inb(0x60) != c) {
-            c = inb(0x60);
-            if (c > 0) {
-                break;
-            }
-        }
-    } while (1);
-
-    printf("0x%x", c);
 }
