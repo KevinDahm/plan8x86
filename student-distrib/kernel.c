@@ -191,11 +191,6 @@ entry (unsigned long magic, unsigned long addr)
     set_intr_gate(0x28, irq_0x8);
 
     irqaction keyboard_handler;
-    keyboard_handler.handle = do_irq_0x1;
-    keyboard_handler.dev_id = 0x21;
-    keyboard_handler.next = NULL;
-
-    irq_desc[0x1] = &keyboard_handler;
     set_intr_gate(0x21, irq_0x1);
 
     lidt(idt_desc_ptr);
@@ -221,7 +216,7 @@ entry (unsigned long magic, unsigned long addr)
     kbd_t a;
     uint8_t x = 0;
     while(1){
-        a = get_echo_key();
+        a = kbd_get_echo();
         if(kbd_equal(a, F1_KEY)){
             if(x & 1){
                 x &= ~1;

@@ -25,7 +25,7 @@ int8_t ascii_shift_lookup[][16] = {
     {' ', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'}
 };
 
-void do_irq_0x1(int dev_id) {
+void _kbd_do_irq(int dev_id) {
     uint8_t c;
     c = inb(0x60);
     if (c == 0xE0) {
@@ -160,6 +160,15 @@ void do_irq_0x1(int dev_id) {
     kbd_ready = 1;
 }
 
+
+void kbd_init(irqaction* keyboard_handler) {
+    keyboard_handler->handle = _kbd_do_irq;
+    keyboard_handler->dev_id = 0x21;
+    keyboard_handler->next = NULL;
+
+    irq_desc[0x1] = keyboard_handler;
+}
+
 int8_t _kbd_to_ascii(kbd_t key) {
     int8_t out;
     if (!key.shift) {
@@ -180,31 +189,31 @@ int8_t _kbd_to_ascii(kbd_t key) {
     return out;
 }
 
-void _print_ascii(kbd_t key) {
+void _kbd_print_ascii(kbd_t key) {
     int8_t k = _kbd_to_ascii(key);
     if (k) {
         printf("%c", k);
     }
 }
 
-kbd_t poll_kbd_state() {
+kbd_t kbd_poll() {
     return kbd_state;
 }
 
-kbd_t poll_echo_kbd_state() {
+kbd_t kbd_poll_echo() {
     kbd_t key = kbd_state;
-    _print_ascii(key);
+    _kbd_print_ascii(key);
     return key;
 }
 
-kbd_t get_echo_key() {
+kbd_t kbd_get_echo() {
     while (!kbd_ready) {asm volatile ("hlt");}
     kbd_ready = 0;
-    _print_ascii(kbd_state);
+    _kbd_print_ascii(kbd_state);
     return kbd_state;
 }
 
-kbd_t get_key() {
+kbd_t kbd_get() {
     while (!kbd_ready) {asm volatile ("hlt");}
     kbd_ready = 0;
     return kbd_state;

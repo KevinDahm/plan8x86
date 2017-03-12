@@ -2,6 +2,7 @@
 #define KBD_H_
 
 #include "types.h"
+#include "idt.h"
 
 // Struct for current kdb state
 typedef struct kbd {
@@ -23,20 +24,20 @@ typedef struct kbd {
 // Current kbd state
 kbd_t kbd_state;
 
-// Handler for the KBD interrupt
-extern void do_irq_0x1();
+// Initialize the KBD handler
+extern void kbd_init(irqaction* keyboard_handler);
 
 // Waits until a key is pressed then prints and returns it
-extern kbd_t get_echo_key();
+extern kbd_t kbd_get_echo();
 
 // Waits until key is predded then returns it
-extern kbd_t gey_key();
+extern kbd_t kbd_get();
 
 // Polls the current kbd_state
-extern kbd_t poll_kbd_state();
+extern kbd_t kbd_poll();
 
 // Polls the current kbd_state and prints it
-extern kbd_t poll_echo_kbd_state();
+extern kbd_t kbd_poll_echo();
 
 // Compares kbd_t with a bitfield (Ignores capsLock)
 extern uint8_t kbd_equal(kbd_t x, uint8_t y);
