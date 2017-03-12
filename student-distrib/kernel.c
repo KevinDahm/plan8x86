@@ -11,6 +11,7 @@
 #include "idt.h"
 #include "kbd.h"
 #include "page.h"
+#include "rtc.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
