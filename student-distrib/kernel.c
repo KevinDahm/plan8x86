@@ -7,6 +7,9 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
+#include "entry.h"
+#include "idt.h"
+#include "kbd.h"
 #include "page.h"
 
 /* Macros. */
@@ -144,26 +147,94 @@ entry (unsigned long magic, unsigned long addr)
         tss.esp0 = 0x800000;
         ltr(KERNEL_TSS);
     }
-    /* Init the PIC */
-    i8259_init();
 
-    /* Initialize devices, memory, filesystem, enable device interrupts on the
-     * PIC, any other initialization stuff... */
-
-//Paging Setup
+    // Paging setup
     clear_tables();
     create_entries();
-    init_paging();      //Enable paging AFTER tables set up
+    init_paging();
 
-    /* Enable interrupts */
-    /* Do not enable the following until after you have set up your
-     * IDT correctly otherwise QEMU will triple fault and simple close
-     * without showing you any output */
-    /* printf("Enabling Interrupts\n"); */
-    /* sti(); */
+    int i;
+    // If an interrupt is generated that we haven't setup complain
+    for (i = 0; i < NUM_VEC; i++) {
+        set_intr_gate(i, ignore_int);
+    }
+
+    // Exceptions
+    set_trap_gate(0, divide_error);
+    set_trap_gate(1, debug);
+    set_intr_gate(2, nmi);
+    set_system_intr_gate(3, int3);
+    set_system_gate(4, overflow);
+    set_system_gate(5, bounds);
+    set_trap_gate(6, invalid_op);
+    set_trap_gate(7, device_not_available);
+    set_trap_gate(8, double_fault);
+    set_trap_gate(9, coprocessor_segment_overrun);
+    set_trap_gate(10, invalid_TSS);
+    set_trap_gate(11, segment_not_present);
+    set_trap_gate(12, stack_segment);
+    set_trap_gate(13, general_protection);
+    set_intr_gate(14, page_fault);
+    set_trap_gate(16, coprocessor_error);
+    set_trap_gate(17, alignment_check);
+    set_trap_gate(18, machine_check);
+    set_trap_gate(19, simd_coprocessor_error);
+    set_system_gate(128, system_call);
+
+    // PIC
+    irqaction rtc_handler;
+    rtc_handler.handle = irq_0x8_handler;
+    rtc_handler.dev_id = 0x28;
+    rtc_handler.next = NULL;
+
+    irq_desc[0x8] = &rtc_handler;
+    set_intr_gate(0x28, irq_0x8);
+
+    irqaction keyboard_handler;
+    keyboard_handler.handle = do_irq_0x1;
+    keyboard_handler.dev_id = 0x21;
+    keyboard_handler.next = NULL;
+
+    irq_desc[0x1] = &keyboard_handler;
+    set_intr_gate(0x21, irq_0x1);
+
+    lidt(idt_desc_ptr);
+
+    outb(0x8A, 0x70);
+    outb(0x26, 0x71);
+    outb(0x8B, 0x70);
+    char prev = inb(0x71);
+    outb((prev | 0x40) & 0x7F, 0x71);
+
+    /* Init the PIC */
+    i8259_init();
+    enable_irq(1);
+    enable_irq(2);
+
+    clear();
+    set_cursor(0, 0);
+
+    printf("Enabling Interrupts\n");
+    sti();
 
     /* Execute the first program (`shell') ... */
-
+    kbd_t a;
+    uint8_t x = 0;
+    while(1){
+        a = get_kbd_state();
+        if(a.col == 2 && a.row == 0){
+            if(x & 1){
+                x &= ~1;
+                enable_irq(8);
+            }else{
+                x |= 1;
+                disable_irq(8);
+            }
+        }if(a.col == 8 && a.row == 3 && a.ctrl == 1){
+            clear();
+            set_cursor(0, 0);
+        }
+    }
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
 }

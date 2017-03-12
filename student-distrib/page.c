@@ -23,9 +23,9 @@ void init_paging(){
     orl     $0x80000001, %%eax  \n\
     movl    %%eax, %%cr0        \n\
     "
-    : /* no outputs */
-    : "a"(page_directory_table)
-    );
+                 : /* no outputs */
+                 : "a"(page_directory_table)
+        );
 }
 
 
