@@ -154,6 +154,10 @@ entry (unsigned long magic, unsigned long addr)
     create_entries();
     init_paging();
 
+    /* Init the PIC */
+    i8259_init();
+
+    /* Initialize the IDT */
     int i;
     // If an interrupt is generated that we haven't setup complain
     for (i = 0; i < NUM_VEC; i++) {
@@ -182,9 +186,6 @@ entry (unsigned long magic, unsigned long addr)
     set_trap_gate(19, simd_coprocessor_error);
     set_system_gate(128, system_call);
 
-    lidt(idt_desc_ptr);
-    /* Init the PIC */
-    i8259_init();
     // Initialize RTC, does not enable the interrupt
     irqaction rtc_handler;
     rtc_init(&rtc_handler);
@@ -194,6 +195,8 @@ entry (unsigned long magic, unsigned long addr)
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
+    lidt(idt_desc_ptr);
+
     clear();
     set_cursor(0, 0);
 
@@ -202,7 +205,7 @@ entry (unsigned long magic, unsigned long addr)
 
     /* Execute the first program (`shell') ... */
     kbd_t a;
-    uint8_t x = 0;
+    uint8_t x = 1;
     int* test;
     while(1){
         a = kbd_get_echo();
