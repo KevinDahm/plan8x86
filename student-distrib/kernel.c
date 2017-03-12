@@ -10,6 +10,7 @@
 #include "entry.h"
 #include "idt.h"
 #include "kbd.h"
+#include "page.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -148,6 +149,11 @@ entry (unsigned long magic, unsigned long addr)
         ltr(KERNEL_TSS);
     }
 
+    // Paging setup
+    clear_tables();
+    create_entries();
+    init_paging();
+
     // If an interrupt is generated that we haven't setup complain
     for (i = 0; i < NUM_VEC; i++) {
         set_intr_gate(i, ignore_int);
@@ -192,12 +198,7 @@ entry (unsigned long magic, unsigned long addr)
     irq_desc[0x1] = &keyboard_handler;
     set_intr_gate(0x21, irq_0x1);
 
-    /* SET_IDT_ENTRY(idt[128], irq128); // System calls */
-    /* idt[128].dpl = 3; */
-
     lidt(idt_desc_ptr);
-
-    // TODO: Test keyboard on lab machine
 
     outb(0x8A, 0x70);
     outb(0x26, 0x71);
@@ -207,15 +208,11 @@ entry (unsigned long magic, unsigned long addr)
 
     /* Init the PIC */
     i8259_init();
-    /* enable_irq(0); */
     enable_irq(1);
     enable_irq(2);
-//    enable_irq(8);
+
     clear();
     set_cursor(0, 0);
-
-    /* Initialize devices, memory, filesystem, enable device interrupts on the
-     * PIC, any other initialization stuff... */
 
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
