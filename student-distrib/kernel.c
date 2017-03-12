@@ -7,6 +7,7 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
+#include "page.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -143,19 +144,23 @@ entry (unsigned long magic, unsigned long addr)
         tss.esp0 = 0x800000;
         ltr(KERNEL_TSS);
     }
-
     /* Init the PIC */
     i8259_init();
 
     /* Initialize devices, memory, filesystem, enable device interrupts on the
      * PIC, any other initialization stuff... */
 
+//Paging Setup
+    clear_tables();
+    create_entries();
+    init_paging();      //Enable paging AFTER tables set up
+
     /* Enable interrupts */
     /* Do not enable the following until after you have set up your
      * IDT correctly otherwise QEMU will triple fault and simple close
      * without showing you any output */
-    /*printf("Enabling Interrupts\n");
-      sti();*/
+    /* printf("Enabling Interrupts\n"); */
+    /* sti(); */
 
     /* Execute the first program (`shell') ... */
 
