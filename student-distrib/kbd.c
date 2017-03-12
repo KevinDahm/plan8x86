@@ -4,6 +4,7 @@
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
 
 static uint8_t e0_waiting;
+static uint8_t kbd_ready;
 static uint8_t caps_held = 0;
 
 int8_t ascii_lookup[][16] = {
@@ -186,9 +187,16 @@ void do_irq_0x1(int dev_id) {
     }
 
     e0_waiting = 0;
+    kbd_ready = 1;
+}
+
+kbd_t poll_kbd_state() {
+    return kbd_state;
 }
 
 kbd_t get_kbd_state() {
+    while (!kbd_ready) {asm volatile ("hlt");}
+    kbd_ready = 0;
     return kbd_state;
 }
 

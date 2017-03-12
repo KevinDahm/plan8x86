@@ -22,4 +22,6 @@ extern int8_t kbd_to_ascii(kbd_t key);
 
 extern kbd_t get_kbd_state();
 
+extern kbd_t poll_kbd_state();
+
 #endif

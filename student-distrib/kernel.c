@@ -225,7 +225,7 @@ entry (unsigned long magic, unsigned long addr)
     sti();
     /* Execute the first program (`shell') ... */
     kbd_t a;
-    int x = 0;
+    uint8_t x = 0;
     while(1){
         a = get_kbd_state();
         if(a.col == 2 && a.row == 0){
