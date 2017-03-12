@@ -11,6 +11,7 @@
 #include "idt.h"
 #include "kbd.h"
 #include "page.h"
+#include "rtc.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -153,6 +154,10 @@ entry (unsigned long magic, unsigned long addr)
     create_entries();
     init_paging();
 
+    /* Init the PIC */
+    i8259_init();
+
+    /* Initialize the IDT */
     int i;
     // If an interrupt is generated that we haven't setup complain
     for (i = 0; i < NUM_VEC; i++) {
@@ -181,35 +186,16 @@ entry (unsigned long magic, unsigned long addr)
     set_trap_gate(19, simd_coprocessor_error);
     set_system_gate(128, system_call);
 
-    // PIC
+    // Initialize RTC, does not enable the interrupt
     irqaction rtc_handler;
-    rtc_handler.handle = irq_0x8_handler;
-    rtc_handler.dev_id = 0x28;
-    rtc_handler.next = NULL;
-
-    irq_desc[0x8] = &rtc_handler;
+    rtc_init(&rtc_handler);
     set_intr_gate(0x28, irq_0x8);
-
+    //Initialize keyboard and enable it's interrupts
     irqaction keyboard_handler;
-    keyboard_handler.handle = do_irq_0x1;
-    keyboard_handler.dev_id = 0x21;
-    keyboard_handler.next = NULL;
-
-    irq_desc[0x1] = &keyboard_handler;
+    kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
     lidt(idt_desc_ptr);
-
-    outb(0x8A, 0x70);
-    outb(0x26, 0x71);
-    outb(0x8B, 0x70);
-    char prev = inb(0x71);
-    outb((prev | 0x40) & 0x7F, 0x71);
-
-    /* Init the PIC */
-    i8259_init();
-    enable_irq(1);
-    enable_irq(2);
 
     clear();
     set_cursor(0, 0);
@@ -219,10 +205,11 @@ entry (unsigned long magic, unsigned long addr)
 
     /* Execute the first program (`shell') ... */
     kbd_t a;
-    uint8_t x = 0;
+    uint8_t x = 1;
+    int* test;
     while(1){
-        a = get_kbd_state();
-        if(a.col == 2 && a.row == 0){
+        a = kbd_get_echo();
+        if(kbd_equal(a, F1_KEY)){
             if(x & 1){
                 x &= ~1;
                 enable_irq(8);
@@ -230,9 +217,12 @@ entry (unsigned long magic, unsigned long addr)
                 x |= 1;
                 disable_irq(8);
             }
-        }if(a.col == 8 && a.row == 3 && a.ctrl == 1){
+        }if(kbd_equal(a, L_KEY) && a.ctrl){
             clear();
             set_cursor(0, 0);
+        }if(kbd_equal(a, N_KEY) && a.ctrl){
+            test = 0;
+            *test = 5;
         }
     }
     /* Spin (nicely, so we don't chew up cycles) */

@@ -1,10 +1,11 @@
 #include "kbd.h"
 #include "lib.h"
+#include "i8259.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
 
-static uint8_t e0_waiting;
-static uint8_t kbd_ready;
+static uint8_t e0_waiting = 0;
+static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
 
 int8_t ascii_lookup[][16] = {
@@ -25,7 +26,7 @@ int8_t ascii_shift_lookup[][16] = {
     {' ', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'}
 };
 
-void do_irq_0x1(int dev_id) {
+void _kbd_do_irq(int dev_id) {
     uint8_t c;
     c = inb(0x60);
     if (c == 0xE0) {
@@ -41,52 +42,28 @@ void do_irq_0x1(int dev_id) {
 
     switch (scanCode) {
         // Left/Right Control pressed
-    case 0x001D:
-    case 0xE01D:
-        kbd_state.ctrl = 1;
-        break;
+    case 0x001D: case 0xE01D: kbd_state.ctrl = 1; break;
 
         // Left/Right Control released
-    case 0x009D:
-    case 0xE09D:
-        kbd_state.ctrl = 0;
-        break;
+    case 0x009D: case 0xE09D: kbd_state.ctrl = 0; break;
 
         // Left/Right Alt pressed
-    case 0x0038:
-    case 0xE038:
-        kbd_state.alt = 1;
-        break;
+    case 0x0038: case 0xE038: kbd_state.alt = 1; break;
 
         // Left/Right Alt released
-    case 0x00B8:
-    case 0xE0B8:
-        kbd_state.alt = 0;
-        break;
+    case 0x00B8: case 0xE0B8: kbd_state.alt = 0; break;
 
         // Left/Right Shift pressed
-    case 0x002A:
-    case 0x0036:
-        kbd_state.shift = 1;
-        break;
+    case 0x02A: case 0x0036: kbd_state.shift = 1; break;
 
         // Left/Right Shift released
-    case 0x00AA:
-    case 0x00B6:
-        kbd_state.shift = 0;
-        break;
+    case 0x00AA: case 0x00B6: kbd_state.shift = 0; break;
 
         // Left/Right GUI/Super pressed
-    case 0xE05B:
-    case 0xE05C:
-        kbd_state.super = 1;
-        break;
+    case 0xE05B: case 0xE05C: kbd_state.super = 1; break;
 
         // Left/Right GUI/Super released
-    case 0xE0DC:
-    case 0xE0DB:
-        kbd_state.super = 0;
-        break;
+    case 0xE0DC: case 0xE0DB: kbd_state.super = 0; break;
 
         // Capslock pressed
     case 0x003A:
@@ -94,11 +71,10 @@ void do_irq_0x1(int dev_id) {
             kbd_state.capsLock ^= 1;
         caps_held = 1;
         break;
+        // Capslock released
+    case 0x00BA: caps_held = 0; break;
 
-    case 0x00BA:
-        caps_held = 0;
-        break;
-
+        // Defines cases for all keys other than the above
         SET(0x0001, 0, 1);   // ESC
         SET(0x003B, 0, 2);   // F1
         SET(0x003C, 0, 3);   // F2
@@ -181,26 +157,21 @@ void do_irq_0x1(int dev_id) {
         break;
     }
 
-    int8_t k = kbd_to_ascii(kbd_state);
-    if (k) {
-        printf("%c", k);
-    }
-
     e0_waiting = 0;
     kbd_ready = 1;
 }
 
-kbd_t poll_kbd_state() {
-    return kbd_state;
+
+void kbd_init(irqaction* keyboard_handler) {
+    keyboard_handler->handle = _kbd_do_irq;
+    keyboard_handler->dev_id = 0x21;
+    keyboard_handler->next = NULL;
+
+    irq_desc[0x1] = keyboard_handler;
+    enable_irq(1);
 }
 
-kbd_t get_kbd_state() {
-    while (!kbd_ready) {asm volatile ("hlt");}
-    kbd_ready = 0;
-    return kbd_state;
-}
-
-int8_t kbd_to_ascii(kbd_t key) {
+int8_t _kbd_to_ascii(kbd_t key) {
     int8_t out;
     if (!key.shift) {
         out = ascii_lookup[key.row][key.col];
@@ -216,5 +187,40 @@ int8_t kbd_to_ascii(kbd_t key) {
         } else {}
     }
 
+
     return out;
+}
+
+void _kbd_print_ascii(kbd_t key) {
+    int8_t k = _kbd_to_ascii(key);
+    if (k) {
+        printf("%c", k);
+    }
+}
+
+kbd_t kbd_poll() {
+    return kbd_state;
+}
+
+kbd_t kbd_poll_echo() {
+    kbd_t key = kbd_state;
+    _kbd_print_ascii(key);
+    return key;
+}
+
+kbd_t kbd_get_echo() {
+    while (!kbd_ready) {asm volatile ("hlt");}
+    kbd_ready = 0;
+    _kbd_print_ascii(kbd_state);
+    return kbd_state;
+}
+
+kbd_t kbd_get() {
+    while (!kbd_ready) {asm volatile ("hlt");}
+    kbd_ready = 0;
+    return kbd_state;
+}
+
+uint8_t kbd_equal(kbd_t x, uint8_t y) {
+    return (x.state & 0xFF) == y;
 }
