@@ -188,7 +188,7 @@ void do_irq_0x1(int dev_id) {
     e0_waiting = 0;
 }
 
-kbd_t get_key_state() {
+kbd_t get_kbd_state() {
     return kbd_state;
 }
 

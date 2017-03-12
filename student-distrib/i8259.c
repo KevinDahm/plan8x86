@@ -66,9 +66,10 @@ disable_irq(uint32_t irq_num)
 void
 send_eoi(uint32_t irq_num)
 {
-    //EOI | irq_num tells the PIC that irq_num was handled
     outb(EOI | irq_num, MASTER_8259_PORT);
-    if(irq_num >= 8){
-        outb(EOI | irq_num, SLAVE_8259_PORT);
+    //EOI | irq_num tells the PIC that irq_num was handled
+    if(irq_num >= 0x8){
+        outb(EOI | (irq_num-8), SLAVE_8259_PORT);
+        outb(EOI | 2, MASTER_8259_PORT);
     }
 }

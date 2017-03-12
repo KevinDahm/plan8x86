@@ -189,10 +189,10 @@ __attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
         (*irq_p->handle)(irq_p->dev_id);
         irq_p = irq_p->next;
     }
-    send_eoi(irq + 0x20);
+    send_eoi(irq);
 }
 
-void irq_0x0_handler(int dev_id) {
+void irq_0x8_handler(int dev_id) {
     outb(0x0C, 0x70);
     inb(0x71);
     test_interrupts();

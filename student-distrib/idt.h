@@ -34,7 +34,7 @@ irqaction *irq_desc[NR_IRQS];
 
 __attribute__((fastcall)) extern void do_IRQ(const struct pt_regs* regs);
 
-void irq_0x0_handler(int dev_id);
+void irq_0x8_handler(int dev_id);
 void irq_0x1_handler(int dev_id);
 
 #endif

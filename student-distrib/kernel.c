@@ -177,12 +177,12 @@ entry (unsigned long magic, unsigned long addr)
 
     // PIC
     irqaction rtc_handler;
-    rtc_handler.handle = irq_0x0_handler;
-    rtc_handler.dev_id = 0x20;
+    rtc_handler.handle = irq_0x8_handler;
+    rtc_handler.dev_id = 0x28;
     rtc_handler.next = NULL;
 
     irq_desc[0x8] = &rtc_handler;
-    set_intr_gate(0x28, irq_0x0);
+    set_intr_gate(0x28, irq_0x8);
 
     irqaction keyboard_handler;
     keyboard_handler.handle = do_irq_0x1;
@@ -199,17 +199,18 @@ entry (unsigned long magic, unsigned long addr)
 
     // TODO: Test keyboard on lab machine
 
-    /* outb(0x8A, 0x70); */
-    /* outb(0x20, 0x71); */
-    /* outb(0x8B, 0x70); */
-    /* char prev = inb(0x71); */
-    /* outb(prev | 0x40, 0x71); */
+    outb(0x8A, 0x70);
+    outb(0x26, 0x71);
+    outb(0x8B, 0x70);
+    char prev = inb(0x71);
+    outb((prev | 0x40) & 0x7F, 0x71);
 
     /* Init the PIC */
     i8259_init();
     /* enable_irq(0); */
     enable_irq(1);
-    /* enable_irq(8); */
+    enable_irq(2);
+//    enable_irq(8);
     clear();
     set_cursor(0, 0);
 
@@ -222,9 +223,24 @@ entry (unsigned long magic, unsigned long addr)
      * without showing you any output */
     printf("Enabling Interrupts\n");
     sti();
-
     /* Execute the first program (`shell') ... */
-
+    kbd_t a;
+    int x = 0;
+    while(1){
+        a = get_kbd_state();
+        if(a.col == 2 && a.row == 0){
+            if(x & 1){
+                x &= ~1;
+                enable_irq(8);
+            }else{
+                x |= 1;
+                disable_irq(8);
+            }
+        }if(a.col == 8 && a.row == 3 && a.ctrl == 1){
+            clear();
+            set_cursor(0, 0);
+        }
+    }
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
 }
