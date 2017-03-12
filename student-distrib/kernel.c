@@ -221,8 +221,8 @@ entry (unsigned long magic, unsigned long addr)
     kbd_t a;
     uint8_t x = 0;
     while(1){
-        a = get_kbd_state();
-        if(a.col == 2 && a.row == 0){
+        a = get_echo_key();
+        if(kbd_equal(a, F1_KEY)){
             if(x & 1){
                 x &= ~1;
                 enable_irq(8);
@@ -230,7 +230,7 @@ entry (unsigned long magic, unsigned long addr)
                 x |= 1;
                 disable_irq(8);
             }
-        }if(a.col == 8 && a.row == 3 && a.ctrl == 1){
+        }if(kbd_equal(a, L_KEY) && a.ctrl){
             clear();
             set_cursor(0, 0);
         }
