@@ -181,30 +181,17 @@ entry (unsigned long magic, unsigned long addr)
     set_trap_gate(19, simd_coprocessor_error);
     set_system_gate(128, system_call);
 
-    // PIC
-    irqaction rtc_handler;
-    rtc_handler.handle = irq_0x8_handler;
-    rtc_handler.dev_id = 0x28;
-    rtc_handler.next = NULL;
-
-    irq_desc[0x8] = &rtc_handler;
-    set_intr_gate(0x28, irq_0x8);
-
-    irqaction keyboard_handler;
-    set_intr_gate(0x21, irq_0x1);
-
     lidt(idt_desc_ptr);
-
-    outb(0x8A, 0x70);
-    outb(0x26, 0x71);
-    outb(0x8B, 0x70);
-    char prev = inb(0x71);
-    outb((prev | 0x40) & 0x7F, 0x71);
-
     /* Init the PIC */
     i8259_init();
-    enable_irq(1);
-    enable_irq(2);
+    // Initialize RTC, does not enable the interrupt
+    irqaction rtc_handler;
+    rtc_init(&rtc_handler);
+    set_intr_gate(0x28, irq_0x8);
+    //Initialize keyboard and enable it's interrupts
+    irqaction keyboard_handler;
+    kbd_init(&keyboard_handler);
+    set_intr_gate(0x21, irq_0x1);
 
     clear();
     set_cursor(0, 0);

@@ -191,9 +191,3 @@ __attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
     }
     send_eoi(irq);
 }
-
-void irq_0x8_handler(int dev_id) {
-    outb(0x0C, 0x70);
-    inb(0x71);
-    test_interrupts();
-}
