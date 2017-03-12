@@ -56,5 +56,6 @@ extern uint8_t kbd_equal(kbd_t x, uint8_t y);
 #define F11_KEY 0x0C
 #define F12_KEY 0x0D
 #define L_KEY 0x68
+#define N_KEY 0x85
 
 #endif

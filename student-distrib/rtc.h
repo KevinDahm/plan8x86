@@ -11,5 +11,6 @@
 #define RTC_CMD_A 0x20
 #define RTC_CMD_B 0x40
 
+/*Call to initialize RTC*/
 extern void rtc_init();
 #endif

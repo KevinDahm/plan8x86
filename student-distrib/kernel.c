@@ -203,6 +203,7 @@ entry (unsigned long magic, unsigned long addr)
     /* Execute the first program (`shell') ... */
     kbd_t a;
     uint8_t x = 0;
+    int* test;
     while(1){
         a = kbd_get_echo();
         if(kbd_equal(a, F1_KEY)){
@@ -216,6 +217,9 @@ entry (unsigned long magic, unsigned long addr)
         }if(kbd_equal(a, L_KEY) && a.ctrl){
             clear();
             set_cursor(0, 0);
+        }if(kbd_equal(a, N_KEY) && a.ctrl){
+            test = 0;
+            *test = 5;
         }
     }
     /* Spin (nicely, so we don't chew up cycles) */

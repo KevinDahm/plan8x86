@@ -4,7 +4,6 @@
 #include "i8259.h"
 static void do_rtc_irq(int dev_id);
 
-
 /* void rtc_init(irqaction* rtc_handler)
  * Decription: Initialzes the rtc and it's irqaction struct for use
  * input: rtc_handler - pointer to irqaction struct for the rtc
@@ -31,11 +30,10 @@ void rtc_init(irqaction* rtc_handler){
     enable_irq(2);
 }
 /* void do_rtc_init(int dev_id)
- * Decription: Initialzes the rtc and it's irqaction struct for use
- * input: rtc_handler - pointer to irqaction struct for the rtc
+ * Decription: Standard rtc handler
+ * input: dev_id - currently unused
  * output: none
- * Side effects: Enables a PIC line, modifies the rtc_handler, and writes to
- * rtc registers
+ * Side effects: Writes to video memory and the RTC
  */
 void do_rtc_irq(int dev_id) {
     //read port C to acknowledge the interrupt
