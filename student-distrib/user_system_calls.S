@@ -1,3 +1,5 @@
+
+// TODO: Put this file in libc/userland and in a user page
   .text
 
 .globl halt
@@ -5,7 +7,7 @@ halt:
   pushl %ebp
   movl %esp, %ebp
   movl $1, %eax
-  popl %ebx
+  movl 8(%ebp), %ebx
   int $0x80
   leave
   ret
@@ -15,7 +17,7 @@ execute:
   pushl %ebp
   movl %esp, %ebp
   movl $2, %eax
-  popl %ebx
+  movl 8(%ebp), %ebx
   int $0x80
   leave
   ret
@@ -25,9 +27,9 @@ read:
   pushl %ebp
   movl %esp, %ebp
   movl $3, %eax
-  popl %ebx
-  popl %ecx
-  popl %edx
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
+  movl 16(%ebp), %edx
   int $0x80
   leave
   ret
@@ -37,9 +39,9 @@ write:
   pushl %ebp
   movl %esp, %ebp
   movl $4, %eax
-  popl %ebx
-  popl %ecx
-  popl %edx
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
+  movl 16(%ebp), %edx
   int $0x80
   leave
   ret
@@ -49,7 +51,7 @@ open:
   pushl %ebp
   movl %esp, %ebp
   movl $5, %eax
-  popl %ebx
+  movl 8(%ebp), %ebx
   int $0x80
   leave
   ret
@@ -59,7 +61,7 @@ close:
   pushl %ebp
   movl %esp, %ebp
   movl $6, %eax
-  popl %ebx
+  movl 8(%ebp), %ebx
   int $0x80
   leave
   ret
@@ -69,8 +71,8 @@ getargs:
   pushl %ebp
   movl %esp, %ebp
   movl $7, %eax
-  popl %ebx
-  popl %ecx
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
   int $0x80
   leave
   ret
@@ -80,7 +82,7 @@ vidmap:
   pushl %ebp
   movl %esp, %ebp
   movl $8, %eax
-  popl %ebx
+  movl 8(%ebp), %ebx
   int $0x80
   leave
   ret
@@ -90,8 +92,8 @@ set_handler:
   pushl %ebp
   movl %esp, %ebp
   movl $9, %eax
-  popl %ebx
-  popl %ecx
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
   int $0x80
   leave
   ret

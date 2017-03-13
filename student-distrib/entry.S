@@ -1,7 +1,9 @@
   .data
 unknown_string:
-  .align 4
   .ascii "Unknown interrupt\0"
+  .extern sys_read
+system_calls_jumptable:
+  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn
 
   .text
 
@@ -30,10 +32,11 @@ unknown_string:
   popl %es; \
   popl %fs; \
 
+.extern printf
 .globl ignore_int
 ignore_int:
   SAVE_ALL
-  pushl unknown_string
+  pushl $unknown_string
   call printf
   add $4, %esp
   RESTORE_ALL
@@ -62,14 +65,13 @@ common_exception:
   addl $8, %esp
   iret
 
-.extern system_calls_jumptable
 .global system_call
 system_call:
   SAVE_ALL
   pushl %edx
   pushl %ecx
   pushl %ebx
-  call *system_calls_jumptable(%eax)
+  call *system_calls_jumptable(, %eax, 4)
   add $12, %esp
   RESTORE_ALL
   iret

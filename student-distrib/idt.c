@@ -2,7 +2,7 @@
 #include "i8259.h"
 #include "lib.h"
 
-void halt(){
+void hang(){
     asm volatile(".1: hlt; jmp .1;");
 }
 
@@ -12,7 +12,7 @@ void do_divide_error(const struct pt_regs* regs) {
     printf("divide error\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_debug(const struct pt_regs* regs) {
@@ -21,7 +21,7 @@ void do_debug(const struct pt_regs* regs) {
     printf("debug\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_nmi(const struct pt_regs* regs) {
@@ -30,7 +30,7 @@ void do_nmi(const struct pt_regs* regs) {
     printf("nmi\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_int3(const struct pt_regs* regs) {
@@ -39,7 +39,7 @@ void do_int3(const struct pt_regs* regs) {
     printf("int3\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_overflow(const struct pt_regs* regs) {
@@ -48,7 +48,7 @@ void do_overflow(const struct pt_regs* regs) {
     printf("overflow\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_bounds(const struct pt_regs* regs) {
@@ -57,14 +57,14 @@ void do_bounds(const struct pt_regs* regs) {
     printf("bounds\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_invalid_op(const struct pt_regs* regs) {
     blue_screen();
     set_cursor(35, 11);
     printf("invalid_op\n");
-    halt();
+    hang();
 }
 
 void do_device_not_available(const struct pt_regs* regs) {
@@ -73,7 +73,7 @@ void do_device_not_available(const struct pt_regs* regs) {
     printf("device_not_available\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_double_fault(const struct pt_regs* regs, uint32_t error) {
@@ -82,7 +82,7 @@ void do_double_fault(const struct pt_regs* regs, uint32_t error) {
     printf("double fault");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_coprocessor_segment_overrun(const struct pt_regs* regs) {
@@ -91,7 +91,7 @@ void do_coprocessor_segment_overrun(const struct pt_regs* regs) {
     printf("coprocessor_segment_overrun\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_invalid_TSS(const struct pt_regs* regs, uint32_t error) {
@@ -100,7 +100,7 @@ void do_invalid_TSS(const struct pt_regs* regs, uint32_t error) {
     printf("invalid_TSS\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_segment_not_present(const struct pt_regs* regs, uint32_t error) {
@@ -109,7 +109,7 @@ void do_segment_not_present(const struct pt_regs* regs, uint32_t error) {
     printf("segment_not_present\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_stack_segment(const struct pt_regs* regs, uint32_t error) {
@@ -118,7 +118,7 @@ void do_stack_segment(const struct pt_regs* regs, uint32_t error) {
     printf("stack_segment\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_general_protection(const struct pt_regs* regs, uint32_t error) {
@@ -127,7 +127,7 @@ void do_general_protection(const struct pt_regs* regs, uint32_t error) {
     printf("general_protection\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_page_fault(const struct pt_regs* regs, uint32_t error) {
@@ -136,7 +136,7 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
     printf("page_fault\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_coprocessor_error(const struct pt_regs* regs) {
@@ -145,7 +145,7 @@ void do_coprocessor_error(const struct pt_regs* regs) {
     printf("coprocessor_error\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_alignment_check(const struct pt_regs* regs, uint32_t error) {
@@ -154,7 +154,7 @@ void do_alignment_check(const struct pt_regs* regs, uint32_t error) {
     printf("alignment_check\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_machine_check(const struct pt_regs* regs) {
@@ -163,7 +163,7 @@ void do_machine_check(const struct pt_regs* regs) {
     printf("machine_check\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
+    hang();
 }
 
 void do_simd_coprocessor_error(const struct pt_regs* regs) {
@@ -172,13 +172,7 @@ void do_simd_coprocessor_error(const struct pt_regs* regs) {
     printf("simd_coprocessor_error\n");
     set_cursor(35, 12);
     printf("0x%#x", regs->eip);
-    halt();
-}
-
-void do_system_call() {
-    blue_screen();
-    printf("system_call\n");
-    halt();
+    hang();
 }
 
 // TODO: Make this support threading and preempt_count. See UTLK page 213

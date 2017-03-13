@@ -43,7 +43,6 @@ extern void do_coprocessor_error();
 extern void do_alignment_check();
 extern void do_machine_check();
 extern void do_simd_coprocessor_error();
-extern void do_system_call();
 
 extern void irq_0x0();
 extern void irq_0x1();

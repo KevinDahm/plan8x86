@@ -12,6 +12,7 @@
 #include "kbd.h"
 #include "page.h"
 #include "rtc.h"
+#include "user_system_calls.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -184,7 +185,7 @@ entry (unsigned long magic, unsigned long addr)
     set_trap_gate(17, alignment_check);
     set_trap_gate(18, machine_check);
     set_trap_gate(19, simd_coprocessor_error);
-    set_system_gate(128, system_call);
+    set_system_gate(0x80, system_call);
 
     // Initialize RTC, does not enable the interrupt
     irqaction rtc_handler;
@@ -202,6 +203,8 @@ entry (unsigned long magic, unsigned long addr)
 
     printf("Enabling Interrupts\n");
     sti();
+
+    read(0, 0, 0);
 
     /* Execute the first program (`shell') ... */
     kbd_t a;
