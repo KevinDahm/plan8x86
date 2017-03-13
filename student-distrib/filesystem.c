@@ -23,7 +23,33 @@ void do_exploration() {
 }
 
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length) {
-    fs_start + ((inode + 1) * 4096);
+    if (inode >= boot_block->num_inodes) {
+        return -1;
+    }
+    inode_t* inode_block = fs_start + ((inode + 1) * 4096);
+    uint32_t block_nums_index = offset / 4096;
+    uint32_t block_num = inode_block->block_nums[block_nums_index];
+    if (block_num >= boot_block->num_data_blocks) {
+        return -1;
+    }
+    block_t* curr_block =  fs_start + ((boot_block->num_inodes + 1) * 4096) + (block_num * 4096);
+    uint32_t b = offset % 4096;
+    uint32_t i = 0;
+    while (i < length) {
+        buf[i] = curr_block->data[b];
+        i++;
+        b++;
+        if (b >= 4096 && i < length) {
+            b -= 4096;
+            block_nums_index++;
+            block_num = inode_block->block_nums[block_nums_index];
+            if (block_num >= boot_block->num_data_blocks) {
+                return -1;
+            }
+            curr_block =  fs_start + ((boot_block->num_inodes + 1) * 4096) + (block_num * 4096);
+        }
+    }
+    return 0;
 }
 
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry) {

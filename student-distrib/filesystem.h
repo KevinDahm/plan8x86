@@ -20,8 +20,12 @@ typedef struct boot_block {
 
 typedef struct inode {
     uint32_t length;
-    
+    uint32_t block_nums[1023];
 } inode_t;
+
+typedef struct block {
+    uint8_t data[4096];
+} block_t;
 
 extern void do_exploration();
 
