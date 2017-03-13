@@ -3,9 +3,6 @@
 
 #include "types.h"
 
-void* fs_start;
-void* fs_end;
-
 typedef struct dentry {
     int8_t name[32];
     int32_t type;
@@ -21,7 +18,19 @@ typedef struct boot_block {
     dentry_t dentries[63];
 } boot_block_t;
 
+typedef struct inode {
+    uint32_t length;
+    
+} inode_t;
+
 extern void do_exploration();
 
+extern void file_system_init(void* start, void* end);
+
+extern int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry);
+
+extern int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry);
+
+extern int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length);
 
 #endif

@@ -13,6 +13,7 @@
 #include "page.h"
 #include "rtc.h"
 #include "user_system_calls.h"
+#include "filesystem.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -58,6 +59,7 @@ entry (unsigned long magic, unsigned long addr)
         int mod_count = 0;
         int i;
         module_t* mod = (module_t*)mbi->mods_addr;
+        file_system_init((void*)mod->mod_start, (void*)mod->mod_end);
         while(mod_count < mbi->mods_count) {
             printf("Module %d loaded at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_start);
             printf("Module %d ends at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_end);
@@ -201,31 +203,39 @@ entry (unsigned long magic, unsigned long addr)
     clear();
     set_cursor(0, 0);
 
-    printf("Enabling Interrupts\n");
+    /* printf("Enabling Interrupts\n"); */
     sti();
 
-    /* Execute the first program (`shell') ... */
-    kbd_t a;
-    uint8_t x = 1;
-    int* test;
-    while(1){
-        a = kbd_get_echo();
-        if(kbd_equal(a, F1_KEY)){
-            if(x & 1){
-                x &= ~1;
-                enable_irq(8);
-            }else{
-                x |= 1;
-                disable_irq(8);
-            }
-        }if(kbd_equal(a, L_KEY) && a.ctrl){
-            clear();
-            set_cursor(0, 0);
-        }if(kbd_equal(a, N_KEY) && a.ctrl){
-            test = 0;
-            *test = 5;
-        }
+    do_exploration();
+
+    dentry_t d;
+    if (!read_dentry_by_name("verylargetextwithverylongname.tx", &d)) {
+        printf("%s\n", d.name);
+        printf("%d\n", d.type);
     }
+
+    /* /\* Execute the first program (`shell') ... *\/ */
+    /* kbd_t a; */
+    /* uint8_t x = 1; */
+    /* int* test; */
+    /* while(1){ */
+    /*     a = kbd_get_echo(); */
+    /*     if(kbd_equal(a, F1_KEY)){ */
+    /*         if(x & 1){ */
+    /*             x &= ~1; */
+    /*             enable_irq(8); */
+    /*         }else{ */
+    /*             x |= 1; */
+    /*             disable_irq(8); */
+    /*         } */
+    /*     }if(kbd_equal(a, L_KEY) && a.ctrl){ */
+    /*         clear(); */
+    /*         set_cursor(0, 0); */
+    /*     }if(kbd_equal(a, N_KEY) && a.ctrl){ */
+    /*         test = 0; */
+    /*         *test = 5; */
+    /*     } */
+    /* } */
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
 }
