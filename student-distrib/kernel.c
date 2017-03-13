@@ -204,8 +204,6 @@ entry (unsigned long magic, unsigned long addr)
     printf("Enabling Interrupts\n");
     sti();
 
-    read(0, 0, 0);
-
     /* Execute the first program (`shell') ... */
     kbd_t a;
     uint8_t x = 1;
