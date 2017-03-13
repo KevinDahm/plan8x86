@@ -1,6 +1,8 @@
   .data
 unknown_string:
   .ascii "Unknown interrupt\0"
+system_calls_jumptable:
+  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn
 
   .text
 
@@ -32,7 +34,7 @@ unknown_string:
 .globl ignore_int
 ignore_int:
   SAVE_ALL
-  pushl unknown_string
+  pushl $unknown_string
   call printf
   add $4, %esp
   RESTORE_ALL
@@ -59,6 +61,17 @@ common_exception:
   addl $8, %esp
   RESTORE_ALL
   addl $8, %esp
+  iret
+
+.global system_call
+system_call:
+  SAVE_ALL
+  pushl %edx
+  pushl %ecx
+  pushl %ebx
+  call *system_calls_jumptable(, %eax, 4)
+  add $12, %esp
+  RESTORE_ALL
   iret
 
 
@@ -233,10 +246,4 @@ machine_check:
 simd_coprocessor_error:
   pushl $0
   pushl $do_simd_coprocessor_error
-  jmp common_exception
-
-  // TODO not common_exception
-.global system_call
-system_call:
-  pushl $0xFFFFFF7F
   jmp common_exception
