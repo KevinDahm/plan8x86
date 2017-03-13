@@ -1,5 +1,6 @@
   .data
 unknown_string:
+  .align 4
   .ascii "Unknown interrupt\0"
 
   .text
@@ -59,6 +60,18 @@ common_exception:
   addl $8, %esp
   RESTORE_ALL
   addl $8, %esp
+  iret
+
+.extern system_calls_jumptable
+.global system_call
+system_call:
+  SAVE_ALL
+  pushl %edx
+  pushl %ecx
+  pushl %ebx
+  call *system_calls_jumptable(%eax)
+  add $12, %esp
+  RESTORE_ALL
   iret
 
 
@@ -233,10 +246,4 @@ machine_check:
 simd_coprocessor_error:
   pushl $0
   pushl $do_simd_coprocessor_error
-  jmp common_exception
-
-  // TODO not common_exception
-.global system_call
-system_call:
-  pushl $0xFFFFFF7F
   jmp common_exception
