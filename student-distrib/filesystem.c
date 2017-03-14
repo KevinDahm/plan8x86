@@ -10,6 +10,11 @@ void file_system_init(void* start, void* end) {
     fs_start = start;
     fs_end = end;
     boot_block = fs_start;
+
+    filesys_ops.open = filesys_open;
+    filesys_ops.close = filesys_close;
+    filesys_ops.read = filesys_read;
+    filesys_ops.write = filesys_write;
 }
 
 void do_exploration() {
@@ -22,34 +27,61 @@ void do_exploration() {
     }
 }
 
-int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length) {
-    if (inode >= boot_block->num_inodes) {
-        return -1;
+int32_t filesys_open(const int8_t* filename) {
+    dentry_t dentry;
+    // TODO: If file does not already exist create it? EC?
+    if (!read_dentry_by_name(filename, &dentry)) {
+        return (int32_t)(fs_start + ((dentry.inode + 1) * BLOCK_SIZE));
+    } else {
+        return NULL;
     }
-    inode_t* inode_block = fs_start + ((inode + 1) * 4096);
-    uint32_t block_nums_index = offset / 4096;
-    uint32_t block_num = inode_block->block_nums[block_nums_index];
+}
+
+int32_t filesys_close(int32_t fd) {
+    return 0;
+}
+
+// TODO: Should this have access to file_descs?
+int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
+    return read_data_by_inode(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+}
+
+int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
+    return 0;
+}
+
+int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length) {
+    uint32_t block_nums_index = offset / BLOCK_SIZE;
+    uint32_t block_num = inode->block_nums[block_nums_index];
     if (block_num >= boot_block->num_data_blocks) {
         return -1;
     }
-    block_t* curr_block =  fs_start + ((boot_block->num_inodes + 1) * 4096) + (block_num * 4096);
-    uint32_t b = offset % 4096;
+    block_t* curr_block =  fs_start + ((boot_block->num_inodes + 1) * BLOCK_SIZE) + (block_num * BLOCK_SIZE);
+    uint32_t b = offset % BLOCK_SIZE;
     uint32_t i = 0;
     while (i < length) {
         buf[i] = curr_block->data[b];
         i++;
         b++;
-        if (b >= 4096 && i < length) {
-            b -= 4096;
+        if (b >= BLOCK_SIZE && i < length) {
+            b -= BLOCK_SIZE;
             block_nums_index++;
-            block_num = inode_block->block_nums[block_nums_index];
+            block_num = inode->block_nums[block_nums_index];
             if (block_num >= boot_block->num_data_blocks) {
                 return -1;
             }
-            curr_block =  fs_start + ((boot_block->num_inodes + 1) * 4096) + (block_num * 4096);
+            curr_block =  fs_start + ((boot_block->num_inodes + 1) * BLOCK_SIZE) + (block_num * BLOCK_SIZE);
         }
     }
     return 0;
+}
+
+int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length) {
+    if (inode >= boot_block->num_inodes) {
+        return -1;
+    }
+    inode_t* inode_block = fs_start + ((inode + 1) * BLOCK_SIZE);
+    return read_data_by_inode(inode_block, offset, buf, length);
 }
 
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry) {

@@ -14,6 +14,7 @@
 #include "rtc.h"
 #include "user_system_calls.h"
 #include "filesystem.h"
+#include "system_calls.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -206,15 +207,12 @@ entry (unsigned long magic, unsigned long addr)
     /* printf("Enabling Interrupts\n"); */
     sti();
 
-    dentry_t d;
-    if (!read_dentry_by_name("testprint", &d)) {
-        int8_t data[5189];
-        read_data(d.inode, 0, data, 5189);
-        data[5189] = 0;
-        for (i = 0; i < 9; i++) {
-            printf("%x ", data[i]);
-        }
-    }
+    system_calls_init();
+    int fd = open("frame0.txt");
+    int8_t text[188];
+    read(fd, text, 187);
+    text[187] = 0;
+    printf("%s", text);
 
     /* /\* Execute the first program (`shell') ... *\/ */
     /* kbd_t a; */

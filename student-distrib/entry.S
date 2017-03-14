@@ -70,7 +70,8 @@ system_call:
   pushl %ecx
   pushl %ebx
   call *system_calls_jumptable(, %eax, 4)
-  add $12, %esp
+  addl $12, %esp
+  movl %eax, 24(%esp) # Kludge to make sure the return value gets out
   RESTORE_ALL
   iret
 
