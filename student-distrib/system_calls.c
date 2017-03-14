@@ -30,7 +30,7 @@ int32_t sys_open(const int8_t* filename) {
         return 0;
     }
     if (!strncmp(filename, "/dev/stdout", strlen("/dev/stdout"))) {
-        file_descs[0].inode = NULL;
+        file_descs[1].inode = NULL;
         file_descs[1].flags = 1;
         return 1;
     }

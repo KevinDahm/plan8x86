@@ -208,34 +208,35 @@ entry (unsigned long magic, unsigned long addr)
     sti();
 
     system_calls_init();
+
     int fd = open("frame0.txt");
     int8_t text[188];
     read(fd, text, 187);
     close(fd);
     printf("%s", text);
 
-    /* /\* Execute the first program (`shell') ... *\/ */
-    /* kbd_t a; */
-    /* uint8_t x = 1; */
-    /* int* test; */
-    /* while(1){ */
-    /*     a = kbd_get_echo(); */
-    /*     if(kbd_equal(a, F1_KEY)){ */
-    /*         if(x & 1){ */
-    /*             x &= ~1; */
-    /*             enable_irq(8); */
-    /*         }else{ */
-    /*             x |= 1; */
-    /*             disable_irq(8); */
-    /*         } */
-    /*     }if(kbd_equal(a, L_KEY) && a.ctrl){ */
-    /*         clear(); */
-    /*         set_cursor(0, 0); */
-    /*     }if(kbd_equal(a, N_KEY) && a.ctrl){ */
-    /*         test = 0; */
-    /*         *test = 5; */
-    /*     } */
-    /* } */
+    /* Execute the first program (`shell') ... */
+    kbd_t a;
+    uint8_t x = 1;
+    int* test;
+    while(1){
+        a = kbd_get_echo();
+        if(kbd_equal(a, F1_KEY)){
+            if(x & 1){
+                x &= ~1;
+                enable_irq(8);
+            }else{
+                x |= 1;
+                disable_irq(8);
+            }
+        }if(kbd_equal(a, L_KEY) && a.ctrl){
+            clear();
+            set_cursor(0, 0);
+        }if(kbd_equal(a, N_KEY) && a.ctrl){
+            test = 0;
+            *test = 5;
+        }
+    }
     /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
 }

@@ -43,7 +43,9 @@ int32_t filesys_close(int32_t fd) {
 
 // TODO: Should this have access to file_descs?
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
-    return read_data_by_inode(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+    int32_t read = read_data_by_inode(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+    file_descs[fd].file_pos += read;
+    return read;
 }
 
 int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
