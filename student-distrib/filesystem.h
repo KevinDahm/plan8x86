@@ -50,9 +50,17 @@ typedef struct file_ops {
 
 file_ops_t filesys_ops;
 
+#define FD_CLEAR 0
+#define FD_DIR 1
+#define FD_FILE 2
+#define FD_STDIN 3
+#define FD_STDOUT 4
+#define FD_RTC 5
+#define FD_KBD 6
+
 typedef struct file_desc {
     file_ops_t *ops;
-    inode_t* inode;
+    uint32_t inode;
     int32_t file_pos;
     int32_t flags;
 } file_desc_t;

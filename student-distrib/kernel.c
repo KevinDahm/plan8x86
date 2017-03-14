@@ -209,6 +209,8 @@ entry (unsigned long magic, unsigned long addr)
 
     system_calls_init();
 
+    /* do_exploration(); */
+
     int fd = open("frame0.txt");
     int8_t text[188];
     read(fd, text, 187);

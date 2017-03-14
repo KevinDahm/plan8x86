@@ -31,7 +31,7 @@ int32_t filesys_open(const int8_t* filename) {
     dentry_t dentry;
     // TODO: If file does not already exist create it? EC?
     if (read_dentry_by_name(filename, &dentry) == 0) {
-        return (int32_t)(fs_start + ((dentry.inode + 1) * BLOCK_SIZE));
+        return dentry.inode;
     } else {
         return NULL;
     }
@@ -43,7 +43,7 @@ int32_t filesys_close(int32_t fd) {
 
 // TODO: Should this have access to file_descs?
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
-    int32_t read = read_data_by_inode(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+    int32_t read = read_data(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
     file_descs[fd].file_pos += read;
     return read;
 }
