@@ -30,7 +30,7 @@ void do_exploration() {
 int32_t filesys_open(const int8_t* filename) {
     dentry_t dentry;
     // TODO: If file does not already exist create it? EC?
-    if (!read_dentry_by_name(filename, &dentry)) {
+    if (read_dentry_by_name(filename, &dentry) == 0) {
         return (int32_t)(fs_start + ((dentry.inode + 1) * BLOCK_SIZE));
     } else {
         return NULL;
@@ -51,29 +51,35 @@ int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length) {
+    uint32_t length_to_read = (inode->length - length) > 0 ? length : inode->length;
+    if (offset > inode->length)
+        return 0;
+
     uint32_t block_nums_index = offset / BLOCK_SIZE;
     uint32_t block_num = inode->block_nums[block_nums_index];
+
     if (block_num >= boot_block->num_data_blocks) {
-        return -1;
+        return 0;
     }
     block_t* curr_block =  fs_start + ((boot_block->num_inodes + 1) * BLOCK_SIZE) + (block_num * BLOCK_SIZE);
     uint32_t b = offset % BLOCK_SIZE;
     uint32_t i = 0;
-    while (i < length) {
+    while (i < length_to_read) {
         buf[i] = curr_block->data[b];
         i++;
         b++;
-        if (b >= BLOCK_SIZE && i < length) {
+        if (b >= BLOCK_SIZE && i < length_to_read) {
             b -= BLOCK_SIZE;
             block_nums_index++;
             block_num = inode->block_nums[block_nums_index];
             if (block_num >= boot_block->num_data_blocks) {
-                return -1;
+                return 0;
             }
             curr_block =  fs_start + ((boot_block->num_inodes + 1) * BLOCK_SIZE) + (block_num * BLOCK_SIZE);
         }
     }
-    return 0;
+    buf[length_to_read] = 0;
+    return length_to_read;
 }
 
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length) {
