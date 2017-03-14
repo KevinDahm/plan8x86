@@ -56,6 +56,8 @@ int32_t sys_open(const int8_t* filename) {
 }
 
 int32_t sys_close(int32_t fd) {
+    if (!(fd < FILE_DESCS_LENGTH))
+        return -1;
     file_descs[fd].flags = 0;
     return 0;
 }
