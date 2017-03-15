@@ -1,4 +1,4 @@
-#include "shell.h"
+#include "test.h"
 #include "types.h"
 #include "system_calls.h"
 #include "user_system_calls.h"
@@ -8,7 +8,9 @@
 #include "idt.h"
 #include "i8259.h"
 
-void shell() {
+#define KBD_BUF_SIZE 128
+
+void test() {
     /* int fd = open("frame0.txt"); */
     /* int8_t text[188]; */
     /* read(fd, text, 187); */
@@ -21,7 +23,7 @@ void shell() {
     int32_t counter;
 
     int fd_kbd = open("/dev/kbd");
-    kbd_t buf[10];
+    kbd_t buf[KBD_BUF_SIZE];
     kbd_t a = {{0}};
     int i;
     int size;
@@ -41,9 +43,9 @@ void shell() {
                     rtc_freq = (rtc_freq+1)%10;
                     write(fd_rtc, &rtc_freq, 4);
                 }
-                if(read(fd_kbd, &buf, 2))
-                    a = buf[0];
-            }
+                if((size = read(fd_kbd, &buf, KBD_BUF_SIZE)))
+					a = buf[0];
+		}
             disable_irq(8);
             clear();
             set_cursor(0,0);
@@ -51,14 +53,11 @@ void shell() {
             clear();
             set_cursor(0, 0);
         } else if(kbd_equal(a, N_KEY) && a.ctrl){
-            if((size = read(fd_kbd, &buf, 10))){
-                for(i = 0; i < size; i++)
-                    if(!(a=buf[i]).ctrl)
-                        printf("%c",kbd_to_ascii(buf[i]));
-            }
+		} else if((size = read(fd_kbd, &buf, KBD_BUF_SIZE))){
+			for(i = 0; i < size; i++)
+				if(((a=buf[i]).state & 0xFF) != 0)
+					printf("%c",kbd_to_ascii(buf[i]));
         }
-
-        a = kbd_poll();
         asm volatile ("hlt;");
     }
 }

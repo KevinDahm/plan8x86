@@ -50,7 +50,12 @@ void _kbd_do_irq(int dev_id) {
 
     switch (scanCode) {
         // Left/Right Control pressed
-    case 0x001D: case 0xE01D: kbd_state.ctrl = 1; break;
+    case 0x001D:
+	case 0xE01D:
+	kbd_state.ctrl = 1;
+	kbd_state.row = 0;
+	kbd_state.col = 0;
+	break;
 
         // Left/Right Control released
     case 0x009D: case 0xE09D: kbd_state.ctrl = 0; break;
@@ -164,7 +169,7 @@ void _kbd_do_irq(int dev_id) {
         kbd_state.col = 0;
         break;
     }
-
+g
     // If buffer isn't full and a key is pressed
     if(can_write && (kbd_state.state & 0xFF)) {
         // Write key yo buffer
@@ -180,7 +185,6 @@ void _kbd_do_irq(int dev_id) {
     e0_waiting = 0;
     kbd_ready = 1;
 }
-
 
 void kbd_init(irqaction* keyboard_handler) {
     keyboard_handler->handle = _kbd_do_irq;

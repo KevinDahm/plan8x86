@@ -14,7 +14,7 @@
 #include "rtc.h"
 #include "kbd.h"
 #include "system_calls.h"
-#include "shell.h"
+#include "test.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -209,7 +209,7 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    shell();
+    test();
 
 /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
