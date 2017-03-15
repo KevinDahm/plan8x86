@@ -7,7 +7,7 @@
 static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
-static uint32_t buffer_index = 0;
+static uint32_t write_index = 0;
 static uint32_t read_index = 0;
 static uint8_t can_write = 1;
 
@@ -165,13 +165,16 @@ void _kbd_do_irq(int dev_id) {
         break;
     }
 
+    // If buffer isn't full and a key is pressed
     if(can_write && (kbd_state.state & 0xFF)) {
-        kbd_buffer[buffer_index] = kbd_state;
-        buffer_index++;
-        if(buffer_index == BUFFER_SIZE)
-            buffer_index = 0;
-
-        if (buffer_index == read_index)
+        // Write key yo buffer
+        kbd_buffer[write_index] = kbd_state;
+        // Increment write_index and loop back if end of buffer reached
+        write_index++;
+        if(write_index == BUFFER_SIZE)
+            write_index = 0;
+        // If buffer full, disable writing
+        if (write_index == read_index)
             can_write = 0;
     }
     e0_waiting = 0;
@@ -201,26 +204,30 @@ int32_t kbd_close(int32_t fd) {
 }
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
-    if(read_index == buffer_index) {
+    // If buffer empty, return 0
+    if(read_index == write_index) {
         return 0;
     }
-    uint32_t length_to_read = (BUFFER_SIZE > nbytes ? nbytes : BUFFER_SIZE) - 1;
+    // Set read limit to the lesser of BUFFER_SIZE and nbytes
+    uint32_t length_to_read = (BUFFER_SIZE > nbytes ? nbytes : BUFFER_SIZE);
     int i = 0;
 
+    // While within absolute limit on reads
     while(i < length_to_read) {
+        // If end of buffer reached, stop reading
+        if (read_index == write_index)
+            break;
+
+        // Copy kbd_t and increment indices (looping if necessary)
         ((kbd_t*)buf)[i] = kbd_buffer[read_index];
         i++;
         read_index++;
+        if (read_index == BUFFER_SIZE) read_index = 0;
 
-        if (read_index == buffer_index || kbd_equal(kbd_buffer[read_index], ENTER))
+        // If last thing pushed to buf was \n, stop reading
+        if (kbd_equal(((kbd_t*)buf)[i - 1], ENTER))
             break;
-        if (read_index == BUFFER_SIZE)
-            read_index = 0;
     }
-
-    kbd_t enter_key;
-    enter_key.state = ENTER;
-    ((kbd_t*)buf)[i] = enter_key;
     can_write = 1;
     return i;
 }

@@ -51,10 +51,10 @@ void shell() {
             clear();
             set_cursor(0, 0);
         } else if(kbd_equal(a, N_KEY) && a.ctrl){
-            printf("READING\n");
             if((size = read(fd_kbd, &buf, 10))){
-                for(i = 0; i <= size; i++)
-                    printf("%c",kbd_to_ascii(buf[i]));
+                for(i = 0; i < size; i++)
+                    if(!(a=buf[i]).ctrl)
+                        printf("%c",kbd_to_ascii(buf[i]));
             }
         }
 
