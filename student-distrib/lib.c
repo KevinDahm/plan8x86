@@ -66,6 +66,16 @@ void set_color(uint8_t col){
     color = col;
 }
 
+void move_up(){
+    int i;
+    screen_y --;
+    memmove((void*)VIDEO, (void*)(VIDEO + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
+    for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
+    }
+
+}
 /* Standard printf().
  * Only supports the following format strings:
  * %%  - print a literal '%' character
@@ -227,12 +237,18 @@ putc(uint8_t c)
     if(c == '\n' || c == '\r') {
         screen_y++;
         screen_x=0;
+        if(screen_y == NUM_ROWS){
+            move_up();
+        }
     } else {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
         screen_x++;
+        screen_y = (screen_y + (screen_x / NUM_COLS));
+        if(screen_y == NUM_ROWS)
+            move_up();
         screen_x %= NUM_COLS;
-        screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
+
     }
 }
 
