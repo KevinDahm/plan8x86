@@ -24,7 +24,7 @@ void test() {
 
     int fd_kbd = open("/dev/kbd");
     kbd_t buf[KBD_BUF_SIZE];
-    kbd_t a = {{0}};
+    static kbd_t a = {{0}};
     int i;
     int size;
 
@@ -44,8 +44,8 @@ void test() {
                     write(fd_rtc, &rtc_freq, 4);
                 }
                 if((size = read(fd_kbd, &buf, KBD_BUF_SIZE)))
-					a = buf[0];
-		}
+                    a = buf[0];
+            }
             disable_irq(8);
             clear();
             set_cursor(0,0);
@@ -53,10 +53,10 @@ void test() {
             clear();
             set_cursor(0, 0);
         } else if(kbd_equal(a, N_KEY) && a.ctrl){
-		} else if((size = read(fd_kbd, &buf, KBD_BUF_SIZE))){
-			for(i = 0; i < size; i++)
-				if(((a=buf[i]).state & 0xFF) != 0)
-					printf("%c",kbd_to_ascii(buf[i]));
+        } else if((size = read(fd_kbd, &buf, KBD_BUF_SIZE))){
+            for(i = 0; i < size; i++)
+                if(((a=buf[i]).state & 0xFF) != 0)
+                    printf("%c",kbd_to_ascii(buf[i]));
         }
         asm volatile ("hlt;");
     }
