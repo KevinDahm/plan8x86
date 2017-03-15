@@ -87,6 +87,5 @@ void do_rtc_irq(int dev_id) {
     //read port C to acknowledge the interrupt
     outb(CHOOSE_RTC_C, RTC_PORT);
     inb(RTC_PORT + 1);
-
     //This is a fun function
 }

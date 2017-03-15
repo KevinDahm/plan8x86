@@ -1,5 +1,5 @@
-#ifndef SYSTEM_CALLS_H_
-#define SYSTEM_CALLS_H_
+#ifndef USER_SYSTEM_CALLS_H_
+#define USER_SYSTEM_CALLS_H_
 
 #include "types.h"
 

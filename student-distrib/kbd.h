@@ -1,8 +1,10 @@
+
 #ifndef KBD_H_
 #define KBD_H_
 
 #include "types.h"
 #include "idt.h"
+#include "filesystem.h"
 
 // Struct for current kdb state
 typedef struct kbd {
@@ -21,8 +23,7 @@ typedef struct kbd {
     };
 } kbd_t;
 
-// Current kbd state
-kbd_t kbd_state;
+file_ops_t kbd_ops;
 
 // Initialize the KBD handler
 extern void kbd_init(irqaction* keyboard_handler);
@@ -42,6 +43,12 @@ extern kbd_t kbd_poll_echo();
 // Compares kbd_t with a bitfield (Ignores capsLock)
 extern uint8_t kbd_equal(kbd_t x, uint8_t y);
 
+extern int8_t kbd_to_ascii(kbd_t key);
+
+extern int32_t kbd_open(const int8_t* filename);
+extern int32_t kbd_close(int32_t fd);
+extern int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes);
+
 #define ESC_KEY 0x01
 #define F1_KEY 0x02
 #define F2_KEY 0x03
@@ -57,5 +64,5 @@ extern uint8_t kbd_equal(kbd_t x, uint8_t y);
 #define F12_KEY 0x0D
 #define L_KEY 0x68
 #define N_KEY 0x85
-
+#define ENTER 0x6B
 #endif

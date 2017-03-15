@@ -2,6 +2,7 @@
 #include "filesystem.h"
 #include "lib.h"
 #include "rtc.h"
+#include "kbd.h"
 
 int32_t sys_halt(uint8_t status) {
     return 0;
@@ -13,24 +14,27 @@ int32_t sys_execute(const uint8_t* command) {
 
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     switch (file_descs[fd].flags) {
-    case FD_CLEAR:
-        return -1;
-    case FD_DIR:
-        return -1;
-    case FD_FILE:
-        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
-    case FD_RTC:
-        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
-    default:
-        return -1;
+        case FD_CLEAR:
+            return -1;
+        case FD_DIR:
+            return -1;
+        case FD_FILE:
+        case FD_RTC:
+        case FD_KBD:
+            /* printf("READING: %d", file_descs[fd].flags); */
+            return (*file_descs[fd].ops->read)(fd, buf, nbytes);
+        default:
+            return -1;
     }
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
-    if(file_descs[fd].flags == FD_RTC){
-        return (*file_descs[fd].ops->write)(fd, buf, nbytes);
+    switch (file_descs[fd].flags) {
+        case FD_RTC:
+            (*file_descs[fd].ops->write)(fd, buf, nbytes);
+        default:
+            return -1;
     }
-    return 0;
 }
 
 int32_t sys_open(const int8_t* filename) {
@@ -58,6 +62,14 @@ int32_t sys_open(const int8_t* filename) {
             file_descs[i].flags = FD_RTC;
             return i;
         }
+
+        if (!strncmp(filename, "/dev/kbd", strlen("/dev/kbd"))) {
+            file_descs[i].ops = &kbd_ops;
+            file_descs[i].inode = NULL;
+            file_descs[i].flags = FD_KBD;
+            return i;
+        }
+
         file_descs[i].inode = (*filesys_ops.open)(filename);
         if (file_descs[i].inode == NULL) {
             return -1;

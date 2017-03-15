@@ -3,10 +3,18 @@
 #include "i8259.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
-
+#define BUFFER_SIZE 128
 static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
+static uint32_t buffer_index = 0;
+static uint32_t read_index = 0;
+static uint8_t can_write = 1;
+
+static kbd_t kbd_buffer[BUFFER_SIZE];
+
+// Current kbd state
+kbd_t kbd_state;
 
 int8_t ascii_lookup[][16] = {
     {'\0', 0x1B, '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'},
@@ -157,6 +165,15 @@ void _kbd_do_irq(int dev_id) {
         break;
     }
 
+    if(can_write && (kbd_state.state & 0xFF)) {
+        kbd_buffer[buffer_index] = kbd_state;
+        buffer_index++;
+        if(buffer_index == BUFFER_SIZE)
+            buffer_index = 0;
+
+        if (buffer_index == read_index)
+            can_write = 0;
+    }
     e0_waiting = 0;
     kbd_ready = 1;
 }
@@ -167,11 +184,48 @@ void kbd_init(irqaction* keyboard_handler) {
     keyboard_handler->dev_id = 0x21;
     keyboard_handler->next = NULL;
 
+    kbd_ops.open = kbd_open;
+    kbd_ops.close = kbd_close;
+    kbd_ops.read = kbd_read;
+
     irq_desc[0x1] = keyboard_handler;
     enable_irq(1);
 }
 
-int8_t _kbd_to_ascii(kbd_t key) {
+int32_t kbd_open(const int8_t* filename) {
+    return 0;
+}
+
+int32_t kbd_close(int32_t fd) {
+    return 0;
+}
+
+int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
+    if(read_index == buffer_index) {
+        return 0;
+    }
+    uint32_t length_to_read = (BUFFER_SIZE > nbytes ? nbytes : BUFFER_SIZE) - 1;
+    int i = 0;
+
+    while(i < length_to_read) {
+        ((kbd_t*)buf)[i] = kbd_buffer[read_index];
+        i++;
+        read_index++;
+
+        if (read_index == buffer_index || kbd_equal(kbd_buffer[read_index], ENTER))
+            break;
+        if (read_index == BUFFER_SIZE)
+            read_index = 0;
+    }
+
+    kbd_t enter_key;
+    enter_key.state = ENTER;
+    ((kbd_t*)buf)[i] = enter_key;
+    can_write = 1;
+    return i;
+}
+
+int8_t kbd_to_ascii(kbd_t key) {
     int8_t out;
     if (!key.shift) {
         out = ascii_lookup[key.row][key.col];
@@ -192,7 +246,7 @@ int8_t _kbd_to_ascii(kbd_t key) {
 }
 
 void _kbd_print_ascii(kbd_t key) {
-    int8_t k = _kbd_to_ascii(key);
+    int8_t k = kbd_to_ascii(key);
     if (k) {
         printf("%c", k);
     }
