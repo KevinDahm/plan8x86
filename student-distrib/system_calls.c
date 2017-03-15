@@ -1,6 +1,7 @@
 #include "system_calls.h"
 #include "filesystem.h"
 #include "lib.h"
+#include "rtc.h"
 
 int32_t sys_halt(uint8_t status) {
     return 0;
@@ -18,13 +19,17 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
         return -1;
     case FD_FILE:
         return (*file_descs[fd].ops->read)(fd, buf, nbytes);
+    case FD_RTC:
+        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
     default:
         return -1;
     }
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
-    // TODO: EC?
+    if(file_descs[fd].flags == FD_RTC){
+        return (*file_descs[fd].ops->write)(fd, buf, nbytes);
+    }
     return 0;
 }
 
@@ -47,6 +52,12 @@ int32_t sys_open(const int8_t* filename) {
         }
     }
     if (i < FILE_DESCS_LENGTH) {
+        if (!strncmp(filename, "/dev/rtc", strlen("/dev/rtc"))) {
+            file_descs[i].ops = &rtc_ops;
+            file_descs[i].inode = NULL;
+            file_descs[i].flags = FD_RTC;
+            return i;
+        }
         file_descs[i].inode = (*filesys_ops.open)(filename);
         if (file_descs[i].inode == NULL) {
             return -1;
