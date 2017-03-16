@@ -15,37 +15,76 @@ void file_system_init(void* start, void* end) {
     filesys_ops.close = filesys_close;
     filesys_ops.read = filesys_read;
     filesys_ops.write = filesys_write;
-}
-
-void do_exploration() {
-    printf("num_dentries: %d\n", boot_block->num_dentries);
-    printf("num_inodes: %d\n", boot_block->num_inodes);
-    printf("num_data_blocks: %d\n", boot_block->num_data_blocks);
-    int i;
-    for (i = 0; i < boot_block->num_dentries; i++) {
-        printf("%s\n", boot_block->dentries[i].name);
-    }
+    filesys_ops.stat = filesys_stat;
 }
 
 int32_t filesys_open(const int8_t* filename) {
     dentry_t dentry;
     // TODO: If file does not already exist create it? EC?
     if (read_dentry_by_name(filename, &dentry) == 0) {
-        return dentry.inode;
-    } else {
-        return NULL;
-    }
+        switch (dentry.type) {
+            case 2:
+                return dentry.inode;
+            case 1:
+                return NULL;
+            case 0:
+            default:
+                return -1;
+        }
+    } else return -1;
 }
 
 int32_t filesys_close(int32_t fd) {
     return 0;
 }
+int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
+    dentry_t e;
+    switch(file_descs[fd].flags) {
+        case FD_FILE:
+            ((fstat_t*)buf)->type = 2;
+            ((fstat_t*)buf)->type = get_size(file_descs[fd].inode);
+            break;
+        case FD_DIR:
+            read_dentry_by_index(file_descs[fd].file_pos - 1, &e);
+            ((fstat_t*)buf)->type = e.type;
+            ((fstat_t*)buf)->size = get_size(e.inode);
+            break;
+        default:
+            return -1;
+    }
+    return 0;
+}
 
 // TODO: Should this have access to file_descs?
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
-    int32_t read = read_data(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
-    file_descs[fd].file_pos += read;
+    int32_t read;
+    switch (file_descs[fd].flags) {
+        case FD_FILE:
+            read = read_data(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+            file_descs[fd].file_pos += read;
+            break;
+        case FD_DIR:
+            read = read_dir_data(file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+            file_descs[fd].file_pos++;
+            break;
+        default:
+            return -1;
+    }
     return read;
+}
+
+int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t length) {
+    if (index >= boot_block->num_dentries)
+        return 0;
+    uint32_t length_to_read = 32 > length ? length : 32;
+    dentry_t d;
+    read_dentry_by_index(index, &d);
+
+    uint32_t i;
+    for (i = 0; i < length_to_read; i++) {
+        buf[i] = ((uint8_t*)d.name)[i];
+    }
+    return length_to_read;
 }
 
 int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
@@ -53,7 +92,7 @@ int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length) {
-    uint32_t length_to_read = (inode->length - length) > 0 ? length : inode->length;
+    uint32_t length_to_read = inode->length > length ? length : inode->length;
     if (offset > inode->length)
         return 0;
 
@@ -103,7 +142,7 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry) {
     return -1;
 }
 
-int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry) {
+uint32_t get_index(const int8_t* fname) {
     uint32_t i;
     uint32_t j;
     uint32_t s1, s2;
@@ -119,8 +158,24 @@ int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry) {
             continue;
         }
         if (!strncmp(name, fname, s2)) {
-            return read_dentry_by_index(i, dentry);
+            return i;
         }
     }
     return -1;
+}
+
+uint32_t get_size(uint32_t inode_index) {
+    if (inode_index >= boot_block->num_inodes) {
+        return -1;
+    }
+    inode_t* inode_block = fs_start + ((inode_index + 1) * BLOCK_SIZE);
+    return inode_block->length;
+}
+
+int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry) {
+    uint32_t i;
+    if ((i = get_index(fname)) != -1)
+        return read_dentry_by_index(i, dentry);
+    else
+        return -1;
 }

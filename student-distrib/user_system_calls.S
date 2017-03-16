@@ -100,9 +100,21 @@ set_handler:
 
 .globl sigreturn
 sigreturn:
- 	pushl %ebp
+        pushl %ebp
   movl %esp, %ebp
   movl $10, %eax
+  int $0x80
+  leave
+  ret
+
+.globl stat
+stat:
+  pushl %ebp
+  movl %esp, %ebp
+  movl $11, %eax
+  movl 8(%ebp), %ebx
+  movl 12(%ebp), %ecx
+  movl 16(%ebp), %edx
   int $0x80
   leave
   ret

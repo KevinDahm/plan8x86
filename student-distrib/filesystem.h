@@ -29,23 +29,35 @@ typedef struct block {
     uint8_t data[BLOCK_SIZE];
 } block_t;
 
-extern void do_exploration();
+typedef struct fstat {
+    uint8_t type;
+    uint32_t size;
+}fstat_t;
+
 extern void file_system_init(void* start, void* end);
 extern int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry);
 extern int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry);
 extern int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length);
+extern int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t length);
 extern int32_t read_data_by_inode(inode_t* inode, uint32_t offset, uint8_t* buf, uint32_t length);
+extern uint32_t get_index(const int8_t* fname);
+extern uint32_t get_size(uint32_t inode_index);
 
 extern int32_t filesys_open(const int8_t* filename);
 extern int32_t filesys_close(int32_t fd);
 extern int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes);
 extern int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes);
+extern int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes);
 
+
+
+/* SYSTEM CALL FILE DATA *****************************************************/
 typedef struct file_ops {
     int32_t (*open)(const int8_t*);
     int32_t (*close)(int32_t);
     int32_t (*read)(int32_t, void*, int32_t);
     int32_t (*write)(int32_t, const void*, int32_t);
+    int32_t (*stat)(int32_t, void*, int32_t);
 } file_ops_t;
 
 file_ops_t filesys_ops;

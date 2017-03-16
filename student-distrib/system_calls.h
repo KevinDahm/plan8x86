@@ -15,4 +15,6 @@ extern int32_t sys_set_handler(int32_t signum, void* handler_address);
 extern int32_t sys_sigreturn(void);
 extern void system_calls_init();
 
+extern int32_t sys_fstat(int32_t fd, void* buf, int32_t nbytes);
+
 #endif

@@ -31,6 +31,7 @@ void rtc_init(irqaction* rtc_handler){
     rtc_ops.close = rtc_close;
     rtc_ops.read = rtc_read;
     rtc_ops.write = rtc_write;
+    rtc_ops.stat = rtc_stat;
 
 //enable the interrupt
     enable_irq(2);
@@ -69,7 +70,9 @@ int32_t rtc_open(const int8_t* filename){
 int32_t rtc_close(int32_t fd){
     return 0;
 }
-
+int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
+    return 0;
+}
 
 
 
