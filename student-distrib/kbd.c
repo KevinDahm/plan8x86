@@ -249,10 +249,10 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     uint32_t j = 0;
     kbd_t k;
     uint8_t a;
-    uint32_t buf_head;
+    nbytes = nbytes > 128 ? 128 : nbytes;
+
     while (i < nbytes) {
         if (write_index != 0) {
-            buf_head = 0;
             j = 0;
             while(1) {
                 k = kbd_buffer[j];
@@ -313,7 +313,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
 
                 j++;
                 cli();
-                if(j == write_index) {
+                if(i == nbytes || j == write_index) {
                     write_index = 0;
                     sti();
                     break;
