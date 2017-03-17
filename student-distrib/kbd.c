@@ -337,21 +337,21 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
                     int8_t dir[] = {"."};
                     int32_t fd = sys_open(dir);
                     int8_t name[33];
+                    int8_t test[33];
                     while((sys_read(fd, name, 33) != 0) && it < index) {it++;}
-                    if(it < index){
+                    if(sys_read(fd, test, 33) == 0)
                         index = 0;
-                    }else{
+                    else
                         index++;
-                    }
                     name[32] = 0;
                     uint32_t fd2 = sys_open(name);
                     fstat_t data;
                     if(sys_stat(fd2, &data, sizeof(fstat_t)) == 0){
                         int8_t text[data.size];
                         sys_read(fd2, text, data.size);
-                        terminal_write(1, text, data.size);
+                          terminal_write(1, text, data.size);
                     }
-                    printf("\nFile Name: %s", name);
+                    printf("\nFile Name: %s\n", name);
                     sys_close(fd2);
                     sys_close(fd);
                 }else if(kbd_equal(k, L_KEY) && k.ctrl) {
