@@ -3,6 +3,7 @@
 #include "lib.h"
 #include "rtc.h"
 #include "kbd.h"
+#include "terminal.h"
 
 int32_t sys_halt(uint8_t status) {
     return 0;
@@ -18,6 +19,7 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
         case FD_FILE:
         case FD_RTC:
         case FD_KBD:
+        case FD_STDIN:
             return (*file_descs[fd].ops->read)(fd, buf, nbytes);
         default:
             return -1;
@@ -36,11 +38,13 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
 int32_t sys_open(const int8_t* filename) {
     // TODO: stdio
     if (!strncmp(filename, "/dev/stdin", strlen("/dev/stdin"))) {
+        file_descs[0].ops = &kbd_ops;
         file_descs[0].inode = NULL;
         file_descs[0].flags = FD_STDIN;
         return 0;
     }
     if (!strncmp(filename, "/dev/stdout", strlen("/dev/stdout"))) {
+        file_descs[1].ops  = &terminal_ops;
         file_descs[1].inode = NULL;
         file_descs[1].flags = FD_STDOUT;
         return 1;

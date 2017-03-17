@@ -48,6 +48,7 @@ extern int8_t kbd_to_ascii(kbd_t key);
 extern int32_t kbd_open(const int8_t* filename);
 extern int32_t kbd_close(int32_t fd);
 extern int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes);
+extern int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes);
 
 #define ESC_KEY 0x01
 #define F1_KEY 0x02
@@ -65,4 +66,6 @@ extern int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes);
 #define L_KEY 0x68
 #define N_KEY 0x85
 #define ENTER 0x6B
+#define BKSP_KEY 0x2D
+#define TAB_KEY 0x40
 #endif

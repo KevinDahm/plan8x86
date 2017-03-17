@@ -8,8 +8,7 @@ static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
 static uint32_t write_index = 0;
-static uint32_t read_index = 0;
-static uint8_t can_write = 1;
+static uint8_t buffer_full = 0;
 
 static kbd_t kbd_buffer[BUFFER_SIZE];
 
@@ -204,18 +203,17 @@ void _kbd_do_irq(int dev_id) {
             kbd_state.col = 0;
             break;
     }
-        // If buffer isn't full and a key is pressed
-        if(can_write && (kbd_state.state & 0xFF)) {
-            // Write key yo buffer
-            kbd_buffer[write_index] = kbd_state;
-            // Increment write_index and loop back if end of buffer reached
-            write_index++;
-            if(write_index == BUFFER_SIZE)
-                write_index = 0;
-            // If buffer full, disable writing
-            if (write_index == read_index)
-                can_write = 0;
-        }
+    // If buffer isn't full and a key is pressed
+    if(!buffer_full && kbd_state.state & 0xFF) {
+        // Write key to buffer
+        kbd_buffer[write_index] = kbd_state;
+        // Increment write_index
+        write_index++;
+
+        // If buffer full, disable writing
+        if (write_index == BUFFER_SIZE)
+            buffer_full = 1;
+    }
     e0_waiting = 0;
     kbd_ready = 1;
 }
@@ -228,6 +226,7 @@ void kbd_init(irqaction* keyboard_handler) {
     kbd_ops.open = kbd_open;
     kbd_ops.close = kbd_close;
     kbd_ops.read = kbd_read;
+    kbd_ops.write = kbd_write;
 
     irq_desc[0x1] = keyboard_handler;
     enable_irq(1);
@@ -241,32 +240,87 @@ int32_t kbd_close(int32_t fd) {
     return 0;
 }
 
+int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
+    return -1;
+}
+
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
-    // If buffer empty, return 0
-    if(read_index == write_index) {
-        return 0;
+    uint32_t i = 0;
+    uint32_t j = 0;
+    kbd_t k;
+    uint8_t a;
+    uint32_t buf_head;
+    while (i < nbytes) {
+        if (write_index != 0) {
+            buf_head = 0;
+            j = 0;
+            while(1) {
+                k = kbd_buffer[j];
+                if(kbd_equal(k, F4_KEY)) {
+                    //RTC TEST
+                } else if(kbd_equal(k,F1_KEY)) {
+                    //LIST FILES
+                    /* clear(); */
+                    /* set_cursor(0,0); */
+                    /* uint8_t* dir = (uint8_t*)"."; */
+                    /* printf("PRINTING DIR: <%s>\n",dir); */
+                    /* int fd = open(dir); */
+                    /* int8_t text[33]; */
+                    /* fstat_t data; */
+                    /* while((read(fd, text, 33) != 0)) { */
+                    /*     text[32] = 0; */
+                    /*     printf("File Name: %s",text); */
+                    /*     for(j = 0; j < 35 - strlen(text); j++) */
+                    /*         printf(" "); */
+                    /*     stat(fd,&data, sizeof(fstat_t)); */
+                    /*     printf("File Type: %d    File Size: %dB\n", data.type, data.size); */
+                    /* } */
+                    /* close(fd); */
+                } else if(kbd_equal(k, L_KEY) && k.ctrl) {
+                    clear();
+                    set_cursor(0, 0);
+                    i = 0;
+                } else if(kbd_equal(k, BKSP_KEY)) {
+                    if(i > 0) {
+                        if(((uint8_t*)buf)[--i]=='\t') {
+                            removec();
+                            removec();
+                            removec();
+                        }
+                        removec();
+                    }
+                } else if(kbd_equal(k,ESC_KEY)){
+                    /* TODO: ESCAPE FUNCTIONALITY */
+                } else if(kbd_equal(k, ENTER)) {
+                    a = '\n';
+                    ((uint8_t*)buf)[i] = a;
+                    i++;
+                    write_index = 0;
+                    return i;
+                } else if(kbd_equal(k,TAB_KEY)){
+                    a = ' ';
+                    ((uint8_t*)buf)[i] = '\t';
+                    i++;
+                    putc(a);
+                    putc(a);
+                    putc(a);
+                    putc(a);
+                } else if((a = kbd_to_ascii(k)) != '\0') {
+                    ((uint8_t*)buf)[i] = a;
+                    i++;
+                    putc(a);
+                }
+
+                j++;
+                cli();
+                if(j == write_index) {
+                    write_index = 0;
+                    sti();
+                    break;
+                }
+            }
+        }
     }
-    // Set read limit to the lesser of BUFFER_SIZE and nbytes
-    uint32_t length_to_read = (BUFFER_SIZE > nbytes ? nbytes : BUFFER_SIZE);
-    int i = 0;
-
-    // While within absolute limit on reads
-    while(i < length_to_read) {
-        // If end of buffer reached, stop reading
-        if (read_index == write_index)
-            break;
-
-        // Copy kbd_t and increment indices (looping if necessary)
-        ((kbd_t*)buf)[i] = kbd_buffer[read_index];
-        i++;
-        read_index++;
-        if (read_index == BUFFER_SIZE) read_index = 0;
-
-        // If last thing pushed to buf was \n, stop reading
-        if (kbd_equal(((kbd_t*)buf)[i - 1], ENTER))
-            break;
-    }
-    can_write = 1;
     return i;
 }
 
