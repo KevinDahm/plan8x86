@@ -42,7 +42,7 @@ int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     switch(file_descs[fd].flags) {
         case FD_FILE:
             ((fstat_t*)buf)->type = 2;
-            ((fstat_t*)buf)->type = get_size(file_descs[fd].inode);
+            ((fstat_t*)buf)->size = get_size(file_descs[fd].inode);
             break;
         case FD_DIR:
             read_dentry_by_index(file_descs[fd].file_pos - 1, &e);

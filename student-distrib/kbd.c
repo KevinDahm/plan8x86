@@ -1,6 +1,7 @@
 #include "kbd.h"
 #include "lib.h"
 #include "i8259.h"
+#include "user_system_calls.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
 #define BUFFER_SIZE 128
@@ -260,23 +261,38 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
                     //RTC TEST
                 } else if(kbd_equal(k,F1_KEY)) {
                     //LIST FILES
-                    /* clear(); */
-                    /* set_cursor(0,0); */
-                    /* uint8_t* dir = (uint8_t*)"."; */
-                    /* printf("PRINTING DIR: <%s>\n",dir); */
-                    /* int fd = open(dir); */
-                    /* int8_t text[33]; */
-                    /* fstat_t data; */
-                    /* while((read(fd, text, 33) != 0)) { */
-                    /*     text[32] = 0; */
-                    /*     printf("File Name: %s",text); */
-                    /*     for(j = 0; j < 35 - strlen(text); j++) */
-                    /*         printf(" "); */
-                    /*     stat(fd,&data, sizeof(fstat_t)); */
-                    /*     printf("File Type: %d    File Size: %dB\n", data.type, data.size); */
-                    /* } */
-                    /* close(fd); */
-                } else if(kbd_equal(k, L_KEY) && k.ctrl) {
+                    uint32_t it;
+                    clear();
+                    set_cursor(0,0);
+                    uint8_t dir[] = {"."};
+                    int32_t fd = open(dir);
+                    int8_t text[33];
+                    fstat_t data;
+                    while((read(fd, text, 33) != 0)) {
+                        text[32] = 0;
+                        printf("File Name: %s",text);
+                        for(it = 0; it < 35 - strlen(text); it++)
+                            printf(" ");
+                        stat(fd,&data, sizeof(fstat_t));
+                        printf("File Type: %d    File Size: %dB\n", data.type, data.size);
+                    }
+                    close(fd);
+                } else if(kbd_equal(k, F2_KEY)) {
+                    clear();
+                    set_cursor(0,0);
+                    uint8_t file[] = "frame0.txt";
+                    int32_t fd2 = open(file);
+                    fstat_t data;
+                    stat(fd2, &data, sizeof(fstat_t));
+                    uint32_t size = data.size + 1;
+                    int8_t text[size];
+                    read(fd2, text, size-1);
+                    text[size - 1] = '\0';
+                    printf(text);
+                    printf("\nFile Name: %s", file);
+                    printf("%d\n", fd2);
+                    /* close(fd2); */
+                }else if(kbd_equal(k, L_KEY) && k.ctrl) {
                     clear();
                     set_cursor(0, 0);
                     i = 0;
@@ -295,6 +311,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
                     a = '\n';
                     ((uint8_t*)buf)[i] = a;
                     i++;
+                    putc(a);
                     write_index = 0;
                     return i;
                 } else if(kbd_equal(k,TAB_KEY)){
@@ -317,6 +334,8 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
                     write_index = 0;
                     sti();
                     break;
+                } else {
+                    sti();
                 }
             }
         }
