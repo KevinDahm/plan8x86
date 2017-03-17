@@ -15,23 +15,23 @@ int32_t sys_execute(const uint8_t* command) {
 
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     switch (file_descs[fd].flags) {
-        case FD_DIR:
-        case FD_FILE:
-        case FD_RTC:
-        case FD_KBD:
-        case FD_STDIN:
-            return (*file_descs[fd].ops->read)(fd, buf, nbytes);
-        default:
-            return -1;
+    case FD_DIR:
+    case FD_FILE:
+    case FD_RTC:
+    case FD_KBD:
+    case FD_STDIN:
+        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
+    default:
+        return -1;
     }
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     switch (file_descs[fd].flags) {
-        case FD_RTC:
-            (*file_descs[fd].ops->write)(fd, buf, nbytes);
-        default:
-            return -1;
+    case FD_RTC:
+        (*file_descs[fd].ops->write)(fd, buf, nbytes);
+    default:
+        return -1;
     }
 }
 
@@ -79,16 +79,16 @@ int32_t sys_open(const int8_t* filename) {
 
             file_descs[i].ops = &filesys_ops;
             switch (d.type) {
-                case 1:
-                    file_descs[i].file_pos = get_index(filename);
-                    file_descs[i].flags = FD_DIR;
-                    break;
-                case 2:
-                    file_descs[i].file_pos = 0;
-                    file_descs[i].flags = FD_FILE;
-                    break;
-                default:
-                    return -1;
+            case 1:
+                file_descs[i].file_pos = get_index(filename);
+                file_descs[i].flags = FD_DIR;
+                break;
+            case 2:
+                file_descs[i].file_pos = 0;
+                file_descs[i].flags = FD_FILE;
+                break;
+            default:
+                return -1;
             }
         } else {
             return -1;
@@ -105,6 +105,7 @@ int32_t sys_close(int32_t fd) {
         return -1;
     file_descs[fd].flags = 0;
     return (*file_descs[fd].ops->close)(fd);
+    return 0;
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
@@ -131,10 +132,10 @@ void system_calls_init() {
 
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     switch (file_descs[fd].flags) {
-        case FD_FILE:
-        case FD_DIR:
-            (*file_descs[fd].ops->stat)(fd, buf, nbytes);
-        default:
-            return -1;
+    case FD_FILE:
+    case FD_DIR:
+        return (*file_descs[fd].ops->stat)(fd, buf, nbytes);
+    default:
+        return -1;
     }
 }

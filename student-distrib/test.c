@@ -12,12 +12,12 @@
 #define BUF_SIZE 128
 
 void test() {
-    int fd_kbd = open((uint8_t*)"/dev/kbd");
+    //  int fd_kbd = open((uint8_t*)"/dev/kbd");
     kbd_t buf[BUF_SIZE];
 
     while(1){
         printf("READ STARTING\n");
-        read(fd_kbd, buf, BUF_SIZE);
+        read(0, buf, BUF_SIZE);
         printf("READ FINISHED\n");
     }
 }

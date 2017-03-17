@@ -23,13 +23,13 @@ int32_t filesys_open(const int8_t* filename) {
     // TODO: If file does not already exist create it? EC?
     if (read_dentry_by_name(filename, &dentry) == 0) {
         switch (dentry.type) {
-            case 2:
-                return dentry.inode;
-            case 1:
-                return NULL;
-            case 0:
-            default:
-                return -1;
+        case 2:
+            return dentry.inode;
+        case 1:
+            return NULL;
+        case 0:
+        default:
+            return -1;
         }
     } else return -1;
 }
@@ -40,17 +40,17 @@ int32_t filesys_close(int32_t fd) {
 int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     dentry_t e;
     switch(file_descs[fd].flags) {
-        case FD_FILE:
-            ((fstat_t*)buf)->type = 2;
-            ((fstat_t*)buf)->size = get_size(file_descs[fd].inode);
-            break;
-        case FD_DIR:
-            read_dentry_by_index(file_descs[fd].file_pos - 1, &e);
-            ((fstat_t*)buf)->type = e.type;
-            ((fstat_t*)buf)->size = get_size(e.inode);
-            break;
-        default:
-            return -1;
+    case FD_FILE:
+        ((fstat_t*)buf)->type = 2;
+        ((fstat_t*)buf)->size = get_size(file_descs[fd].inode);
+        break;
+    case FD_DIR:
+        read_dentry_by_index(file_descs[fd].file_pos - 1, &e);
+        ((fstat_t*)buf)->type = e.type;
+        ((fstat_t*)buf)->size = get_size(e.inode);
+        break;
+    default:
+        return -1;
     }
     return 0;
 }
@@ -59,16 +59,16 @@ int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
     int32_t read;
     switch (file_descs[fd].flags) {
-        case FD_FILE:
-            read = read_data(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
-            file_descs[fd].file_pos += read;
-            break;
-        case FD_DIR:
-            read = read_dir_data(file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
-            file_descs[fd].file_pos++;
-            break;
-        default:
-            return -1;
+    case FD_FILE:
+        read = read_data(file_descs[fd].inode, file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+        file_descs[fd].file_pos += read;
+        break;
+    case FD_DIR:
+        read = read_dir_data(file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+        file_descs[fd].file_pos++;
+        break;
+    default:
+        return -1;
     }
     return read;
 }
@@ -166,7 +166,7 @@ uint32_t get_index(const int8_t* fname) {
 
 uint32_t get_size(uint32_t inode_index) {
     if (inode_index >= boot_block->num_inodes) {
-        return -1;
+        return 0;
     }
     inode_t* inode_block = fs_start + ((inode_index + 1) * BLOCK_SIZE);
     return inode_block->length;
