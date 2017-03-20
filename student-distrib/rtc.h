@@ -20,6 +20,5 @@ extern int32_t rtc_close(int32_t fd);
 extern int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes);
 extern int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes);
 extern int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes);
-extern void rtc_test(int fd_kbd, int fd_rtc);
 file_ops_t rtc_ops;
 #endif

@@ -83,42 +83,6 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
     return 0;
 }
 
-#define KBD_BUF_SIZE 128 //from test.c
-void rtc_test(int fd_kbd, int fd_rtc){
-    int32_t rtc_freq;
-    uint32_t size;
-    uint32_t i;
-    int cont = 1;
-    kbd_t buf[KBD_BUF_SIZE];
-    clear();
-    set_cursor(0, 0);
-    rtc_freq = BASE_RTC_FREQ;
-    enable_irq(8);
-
-    while(cont){
-        read(fd_rtc, &size, 4);//use size as a dummy variable
-        printf("1");
-        if((size = read(fd_kbd, &buf, KBD_BUF_SIZE))){
-            for(i = 0; i < size; i++){
-                if(kbd_equal(buf[i], F5_KEY)){
-                    cont = 0;
-                    break;
-                }
-                else if(kbd_equal(buf[i], F4_KEY)){
-                    rtc_freq <<= 1;
-                    if(rtc_freq > RTC_MAX_FREQ)
-                        rtc_freq = BASE_RTC_FREQ;
-                    write(fd_rtc, &rtc_freq, 4);
-                }
-            }
-
-        }
-    }
-    disable_irq(8);
-    clear();
-    set_cursor(0,0);
-}
-
 
 /* void do_rtc_init(int dev_id)
  * Decription: Standard rtc handler

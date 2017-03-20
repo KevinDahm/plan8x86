@@ -8,6 +8,7 @@
 #include "idt.h"
 #include "i8259.h"
 #include "rtc.h"
+#include "terminal.h"
 
 #define BUF_SIZE 128
 
@@ -16,8 +17,6 @@ void test() {
     kbd_t buf[BUF_SIZE];
 
     while(1){
-        printf("READ STARTING\n");
-        read(0, buf, BUF_SIZE);
-        printf("READ FINISHED\n");
+        terminal_read(0, buf, BUF_SIZE);
     }
 }

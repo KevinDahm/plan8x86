@@ -15,6 +15,7 @@
 #include "kbd.h"
 #include "system_calls.h"
 #include "test.h"
+#include "terminal.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -206,6 +207,7 @@ entry (unsigned long magic, unsigned long addr)
     /* printf("Enabling Interrupts\n"); */
     sti();
 
+    terminal_init();
     system_calls_init();
 
     /* Execute the first program (`shell') ... */

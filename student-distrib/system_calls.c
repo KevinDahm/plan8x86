@@ -29,6 +29,7 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     switch (file_descs[fd].flags) {
     case FD_RTC:
+    case FD_STDOUT:
         (*file_descs[fd].ops->write)(fd, buf, nbytes);
     default:
         return -1;
@@ -38,13 +39,13 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
 int32_t sys_open(const int8_t* filename) {
     // TODO: stdio
     if (!strncmp(filename, "/dev/stdin", strlen("/dev/stdin"))) {
-        file_descs[0].ops = &kbd_ops;
+        file_descs[0].ops = &stdin_ops;
         file_descs[0].inode = NULL;
         file_descs[0].flags = FD_STDIN;
         return 0;
     }
     if (!strncmp(filename, "/dev/stdout", strlen("/dev/stdout"))) {
-        file_descs[1].ops  = &terminal_ops;
+        file_descs[1].ops  = &stdout_ops;
         file_descs[1].inode = NULL;
         file_descs[1].flags = FD_STDOUT;
         return 1;

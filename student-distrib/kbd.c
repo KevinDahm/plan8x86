@@ -12,6 +12,7 @@ static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
 static uint32_t write_index = 0;
+static uint32_t read_index = 0;
 static uint8_t buffer_full = 0;
 
 static kbd_t kbd_buffer[BUFFER_SIZE];
@@ -249,160 +250,20 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
-    uint32_t i = 0;
-    uint32_t j = 0;
-    kbd_t k;
-    uint8_t a;
-    uint32_t index = 0;
-    nbytes = nbytes > 128 ? 128 : nbytes;
-
-    while (i < nbytes) {
-        if (write_index != 0) {
-            j = 0;
-            while(1) {
-                k = kbd_buffer[j];
-                if(kbd_equal(k, F4_KEY)) {
-                    clear();
-                    set_cursor(0, 0);
-                    uint32_t rtc_freq = BASE_RTC_FREQ;
-                    uint32_t dummy;
-                    uint32_t fd_rtc = sys_open("/dev/rtc");
-                    enable_irq(8);
-                    while(!kbd_equal(k, F5_KEY)){
-                        sys_read(fd_rtc, &dummy, 4);
-                        printf("1");
-                        if (write_index != 0 && !kbd_equal(k, F5_KEY)) {
-                            j = 0;
-                            while(1) {
-                                k = kbd_buffer[j];
-                                if(kbd_equal(k, F4_KEY)){
-                                    rtc_freq <<= 1;
-                                    if(rtc_freq > RTC_MAX_FREQ)
-                                        rtc_freq = BASE_RTC_FREQ;
-                                    sys_write(fd_rtc, &rtc_freq, 4);
-                                }else if(kbd_equal(k, F5_KEY)){
-                                    break;
-                                }
-                                j++;
-                                cli();
-                                if(i == nbytes || j == write_index) {
-                                    write_index = 0;
-                                    sti();
-                                    break;
-                                } else {
-                                    sti();
-                                }
-                            }
-                        }
-                    }
-                    disable_irq(8);
-                    sys_close(fd_rtc);
-                }else if(kbd_equal(k,F1_KEY)) {
-                    //LIST FILES
-                    uint32_t it;
-                    clear();
-                    set_cursor(0,0);
-                    int8_t dir[] = ".";
-                    int32_t fd = sys_open(dir);
-                    int8_t text[33];
-                    fstat_t data;
-                    while((sys_read(fd, text, 33) != 0)) {
-                        text[32] = 0;
-                        printf("File Name: %s",text);
-                        for(it = 0; it < 35 - strlen(text); it++)
-                            printf(" ");
-                        sys_stat(fd,&data, sizeof(fstat_t));
-                        printf("File Type: %d    File Size: %dB\n", data.type, data.size);
-                    }
-                    sys_close(fd);
-                } else if(kbd_equal(k, F2_KEY)) {
-                    clear();
-                    set_cursor(0,0);
-                    int8_t file[] = "frame0.txt";
-                    int32_t fd2 = sys_open(file);
-                    fstat_t data;
-                    sys_stat(fd2, &data, sizeof(fstat_t));
-                    uint32_t size = data.size + 1;
-                    int8_t text[size];
-                    sys_read(fd2, text, size-1);
-                    text[size - 1] = '\0';
-                    printf(text);
-                    printf("\nFile Name: %s", file);
-                    sys_close(fd2);
-                }
-                else if(kbd_equal(k, F3_KEY)){
-                    uint32_t it = 0;
-                    clear();
-                    set_cursor(0,0);
-                    int8_t dir[] = {"."};
-                    int32_t fd = sys_open(dir);
-                    int8_t name[33];
-                    int8_t test[33];
-                    while((sys_read(fd, name, 33) != 0) && it < index) {it++;}
-                    if(sys_read(fd, test, 33) == 0)
-                        index = 0;
-                    else
-                        index++;
-                    name[32] = 0;
-                    uint32_t fd2 = sys_open(name);
-                    fstat_t data;
-                    if(sys_stat(fd2, &data, sizeof(fstat_t)) == 0){
-                        int8_t text[data.size];
-                        sys_read(fd2, text, data.size);
-                          terminal_write(1, text, data.size);
-                    }
-                    printf("\nFile Name: %s\n", name);
-                    sys_close(fd2);
-                    sys_close(fd);
-                }else if(kbd_equal(k, L_KEY) && k.ctrl) {
-                    clear();
-                    set_cursor(0, 0);
-                    i = 0;
-                } else if(kbd_equal(k, BKSP_KEY)) {
-                    if(i > 0) {
-                        if(((uint8_t*)buf)[--i]=='\t') {
-                            removec();
-                            removec();
-                            removec();
-                        }
-                        removec();
-                    }
-                } else if(kbd_equal(k,ESC_KEY)){
-                    /* TODO: ESCAPE FUNCTIONALITY */
-                } else if(kbd_equal(k, ENTER)) {
-                    a = '\n';
-                    ((uint8_t*)buf)[i] = a;
-                    i++;
-                    putc(a);
-                    write_index = 0;
-                    return i;
-                } else if(kbd_equal(k,TAB_KEY)){
-                    a = ' ';
-                    ((uint8_t*)buf)[i] = '\t';
-                    i++;
-                    putc(a);
-                    putc(a);
-                    putc(a);
-                    putc(a);
-                } else if((a = kbd_to_ascii(k)) != '\0') {
-                    ((uint8_t*)buf)[i] = a;
-                    i++;
-                    putc(a);
-                }
-
-                j++;
-                cli();
-                if(i == nbytes || j == write_index) {
-                    write_index = 0;
-                    sti();
-                    break;
-                } else {
-                    sti();
-                }
-            }
-        }
+    if(nbytes != 2){
+        return -1;
     }
-    return i;
+    cli();
+    if(read_index == write_index){
+        read_index = 0;
+        write_index = 0;
+        sti();
+        return 0;
+    }
+    sti();
+    *((kbd_t*)buf) = kbd_buffer[read_index];
+    read_index++;
+    return nbytes;
 }
 
 int8_t kbd_to_ascii(kbd_t key) {
