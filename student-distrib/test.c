@@ -9,6 +9,6 @@ void test() {
     int8_t buf[BUF_SIZE];
 
     while(1){
-        sys_read(0, buf, BUF_SIZE);
+        read(0, buf, BUF_SIZE);
     }
 }

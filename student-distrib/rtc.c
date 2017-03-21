@@ -9,8 +9,8 @@ static int8_t rtc_flag;
  * Decription: Initialzes the rtc and it's irqaction struct for use
  * input: rtc_handler - pointer to irqaction struct for the rtc
  * output: none
- * Side effects: Enables a PIC line, modifies the rtc_handler, and writes to
- * rtc registers
+ * Side effects: Enables a PIC line, modifies the rtc_handler, writes to
+ * rtc registers, and sets up system call function pointers
  */
 void rtc_init(irqaction* rtc_handler){
 //set control register A
@@ -61,9 +61,15 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
     if(freq != 1){//check if freq was a power of 2
         return -1;
     }
+    //disable interrupts while writing to the rtc
+    uint32_t flags;
+    cli_and_save(flags);
+
     //write log(freq) to the rtc
     outb(CHOOSE_RTC_A, RTC_PORT);
     outb((16-logf) | RTC_CMD_A, RTC_PORT+1);
+
+    restore_flags(flags);
     return 0;
 }
 
@@ -79,10 +85,18 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     if(nbytes != 4){
         return -1;
     }
-    //Write the frequency to buf
+    //disable interrupts while writing to the rtc
+    uint32_t flags;
+    cli_and_save(flags);
+
+    //Get the frequency
     outb(CHOOSE_RTC_A, RTC_PORT);
-    uint32_t freq = inb(RTC_PORT+1);
-    *((uint32_t*)buf) = 16-(freq & 0xF);
+    uint8_t freq = inb(RTC_PORT+1);
+
+    restore_flags(flags);
+
+    //Translate the frequency and write it to the buf
+    *((uint32_t*)buf) = 1 << (16-(freq & 0xF));
 
     //loop until RTC interrupt
     do{
