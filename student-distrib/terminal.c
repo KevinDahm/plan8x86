@@ -96,8 +96,8 @@ void list_file_name(int8_t * name){
     int8_t text[size];
     sys_read(fd, text, size-1);
     text[size - 1] = '\0';
-    printf("\nFile Name: %s", name);
     sys_write(1, text, size);
+    printf("\nFile Name: %s", name);
     sys_close(fd);
 }
 
@@ -178,7 +178,6 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                 i++;
                 putc(a);
             }
-
         }
     }
     return i;

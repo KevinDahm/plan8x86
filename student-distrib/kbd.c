@@ -1,16 +1,13 @@
 #include "kbd.h"
 #include "lib.h"
 #include "i8259.h"
-#include "user_system_calls.h"
-#include "system_calls.h"
-#include "rtc.h"
-#include "terminal.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
 #define BUFFER_SIZE 128
 static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
+
 static uint32_t write_index = 0;
 static uint32_t read_index = 0;
 static uint8_t buffer_full = 0;
@@ -213,14 +210,17 @@ void _kbd_do_irq(int dev_id) {
         // Write key to buffer
         kbd_buffer[write_index] = kbd_state;
         // Increment write_index
-        write_index++;
+        write_index = (write_index + 1)%BUFFER_SIZE;
 
         // If buffer full, disable writing
-        if (write_index == BUFFER_SIZE)
+        if (write_index == read_index)
             buffer_full = 1;
     }
+
     e0_waiting = 0;
+    //Ready to read if key is pressed
     kbd_ready = 1;
+
 }
 
 void kbd_init(irqaction* keyboard_handler) {
@@ -250,20 +250,18 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
-    if(nbytes != 2){
-        return -1;
+    nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
+    uint32_t i = 0;
+    while(i < nbytes){
+        if(read_index != write_index){
+            *((kbd_t*)buf) = kbd_buffer[read_index];
+            read_index = (read_index + 1)%BUFFER_SIZE;
+            i += sizeof(kbd_t);
+        }else{
+            return i;
+        }
     }
-    cli();
-    if(read_index == write_index){
-        read_index = 0;
-        write_index = 0;
-        sti();
-        return 0;
-    }
-    sti();
-    *((kbd_t*)buf) = kbd_buffer[read_index];
-    read_index++;
-    return nbytes;
+    return i;
 }
 
 int8_t kbd_to_ascii(kbd_t key) {

@@ -10,7 +10,6 @@
 #include "entry.h"
 #include "idt.h"
 #include "page.h"
-#include "filesystem.h"
 #include "rtc.h"
 #include "kbd.h"
 #include "system_calls.h"
@@ -206,7 +205,7 @@ entry (unsigned long magic, unsigned long addr)
 
     /* printf("Enabling Interrupts\n"); */
     sti();
-
+    /* Initialize stdio*/
     terminal_init();
     system_calls_init();
 
