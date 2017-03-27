@@ -1,5 +1,9 @@
 #include "system_calls.h"
+#include "filesystem.h"
 #include "lib.h"
+#include "rtc.h"
+#include "kbd.h"
+#include "terminal.h"
 
 int32_t sys_halt(uint8_t status) {
     return 0;
@@ -10,19 +14,98 @@ int32_t sys_execute(const uint8_t* command) {
 }
 
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
-    printf("sys_read");
-    return 0;
+    switch (file_descs[fd].flags) {
+    case FD_DIR:
+    case FD_FILE:
+    case FD_RTC:
+    case FD_KBD:
+    case FD_STDIN:
+        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
+    default:
+        return -1;
+    }
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
-    return 0;
+    switch (file_descs[fd].flags) {
+    case FD_RTC:
+    case FD_STDOUT:
+        (*file_descs[fd].ops->write)(fd, buf, nbytes);
+    default:
+        return -1;
+    }
 }
 
-int32_t sys_open(const uint8_t* filename) {
-    return 0;
+int32_t sys_open(const int8_t* filename) {
+    // TODO: stdio
+    if (!strncmp(filename, "/dev/stdin", strlen("/dev/stdin"))) {
+        file_descs[0].ops = &stdin_ops;
+        file_descs[0].inode = NULL;
+        file_descs[0].flags = FD_STDIN;
+        return 0;
+    }
+    if (!strncmp(filename, "/dev/stdout", strlen("/dev/stdout"))) {
+        file_descs[1].ops  = &stdout_ops;
+        file_descs[1].inode = NULL;
+        file_descs[1].flags = FD_STDOUT;
+        return 1;
+    }
+    int i;
+    for (i = 2; i < FILE_DESCS_LENGTH; i++) {
+        if (file_descs[i].flags == 0) {
+            break;
+        }
+    }
+    if (i < FILE_DESCS_LENGTH) {
+        if (!strncmp(filename, "/dev/rtc", strlen("/dev/rtc"))) {
+            file_descs[i].ops = &rtc_ops;
+            file_descs[i].inode = NULL;
+            file_descs[i].flags = FD_RTC;
+            return i;
+        }
+
+        if (!strncmp(filename, "/dev/kbd", strlen("/dev/kbd"))) {
+            file_descs[i].ops = &kbd_ops;
+            file_descs[i].inode = NULL;
+            file_descs[i].flags = FD_KBD;
+            return i;
+        }
+
+        file_descs[i].inode = (*filesys_ops.open)(filename);
+        if (file_descs[i].inode == -1) {
+            return -1;
+        }
+        dentry_t d;
+        if (read_dentry_by_name(filename, &d) == 0) {
+
+            file_descs[i].ops = &filesys_ops;
+            switch (d.type) {
+            case 1:
+                file_descs[i].file_pos = get_index(filename);
+                file_descs[i].flags = FD_DIR;
+                break;
+            case 2:
+                file_descs[i].file_pos = 0;
+                file_descs[i].flags = FD_FILE;
+                break;
+            default:
+                return -1;
+            }
+        } else {
+            return -1;
+        }
+
+        return i;
+    } else {
+        return -1;
+    }
 }
 
 int32_t sys_close(int32_t fd) {
+    if (fd >= FILE_DESCS_LENGTH || fd < 2)
+        return -1;
+    file_descs[fd].flags = 0;
+    return (*file_descs[fd].ops->close)(fd);
     return 0;
 }
 
@@ -40,4 +123,20 @@ int32_t sys_set_handler(int32_t signum, void* handler_address) {
 
 int32_t sys_sigreturn(void) {
     return 0;
+}
+
+// TODO: processes
+void system_calls_init() {
+    sys_open("/dev/stdin");
+    sys_open("/dev/stdout");
+}
+
+int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
+    switch (file_descs[fd].flags) {
+    case FD_FILE:
+    case FD_DIR:
+        return (*file_descs[fd].ops->stat)(fd, buf, nbytes);
+    default:
+        return -1;
+    }
 }

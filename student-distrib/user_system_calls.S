@@ -1,108 +1,36 @@
 
-// TODO: Put this file in libc/userland and in a user page
-  .text
 
-.globl halt
-halt:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $1, %eax
-  movl 8(%ebp), %ebx
-  int $0x80
-  leave
-  ret
+#define SYS_HALT    1
+#define SYS_EXECUTE 2
+#define SYS_READ    3
+#define SYS_WRITE   4
+#define SYS_OPEN    5
+#define SYS_CLOSE   6
+#define SYS_GETARGS 7
+#define SYS_VIDMAP  8
+#define SYS_SET_HANDLER  9
+#define SYS_SIGRETURN  10
+#define SYS_STAT 11
+#define DO_CALL(name,number)   \
+.GLOBL name                   ;\
+name:   PUSHL	%EBX          ;\
+	MOVL	$number,%EAX  ;\
+	MOVL	8(%ESP),%EBX  ;\
+	MOVL	12(%ESP),%ECX ;\
+	MOVL	16(%ESP),%EDX ;\
+	INT	$0x80         ;\
+	POPL	%EBX          ;\
+	RET
 
-.globl execute
-execute:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $2, %eax
-  movl 8(%ebp), %ebx
-  int $0x80
-  leave
-  ret
-
-.globl read
-read:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $3, %eax
-  movl 8(%ebp), %ebx
-  movl 12(%ebp), %ecx
-  movl 16(%ebp), %edx
-  int $0x80
-  leave
-  ret
-
-.globl write
-write:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $4, %eax
-  movl 8(%ebp), %ebx
-  movl 12(%ebp), %ecx
-  movl 16(%ebp), %edx
-  int $0x80
-  leave
-  ret
-
-.globl open
-open:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $5, %eax
-  movl 8(%ebp), %ebx
-  int $0x80
-  leave
-  ret
-
-.globl close
-close:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $6, %eax
-  movl 8(%ebp), %ebx
-  int $0x80
-  leave
-  ret
-
-.globl getargs
-getargs:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $7, %eax
-  movl 8(%ebp), %ebx
-  movl 12(%ebp), %ecx
-  int $0x80
-  leave
-  ret
-
-.globl vidmap
-vidmap:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $8, %eax
-  movl 8(%ebp), %ebx
-  int $0x80
-  leave
-  ret
-
-.globl set_handler
-set_handler:
-  pushl %ebp
-  movl %esp, %ebp
-  movl $9, %eax
-  movl 8(%ebp), %ebx
-  movl 12(%ebp), %ecx
-  int $0x80
-  leave
-  ret
-
-.globl sigreturn
-sigreturn:
- 	pushl %ebp
-  movl %esp, %ebp
-  movl $10, %eax
-  int $0x80
-  leave
-  ret
+ /* the system call library wrappers */
+DO_CALL(halt,SYS_HALT)
+DO_CALL(execute,SYS_EXECUTE)
+DO_CALL(read,SYS_READ)
+DO_CALL(write,SYS_WRITE)
+DO_CALL(open,SYS_OPEN)
+DO_CALL(close,SYS_CLOSE)
+DO_CALL(getargs,SYS_GETARGS)
+DO_CALL(vidmap,SYS_VIDMAP)
+DO_CALL(set_handler,SYS_SET_HANDLER)
+DO_CALL(sigreturn,SYS_SIGRETURN)
+DO_CALL(stat,SYS_STAT);
