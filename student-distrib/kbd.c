@@ -3,10 +3,19 @@
 #include "i8259.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
-
+#define BUFFER_SIZE 128
 static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
+
+static uint32_t write_index = 0;
+static uint32_t read_index = 0;
+static uint8_t buffer_full = 0;
+
+static kbd_t kbd_buffer[BUFFER_SIZE];
+
+// Current kbd state
+kbd_t kbd_state;
 
 int8_t ascii_lookup[][16] = {
     {'\0', 0x1B, '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'},
@@ -42,28 +51,68 @@ void _kbd_do_irq(int dev_id) {
 
     switch (scanCode) {
         // Left/Right Control pressed
-    case 0x001D: case 0xE01D: kbd_state.ctrl = 1; break;
+    case 0x001D:
+    case 0xE01D:
+        kbd_state.ctrl = 1;
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        break;
 
         // Left/Right Control released
-    case 0x009D: case 0xE09D: kbd_state.ctrl = 0; break;
+    case 0x009D:
+    case 0xE09D:
+        kbd_state.ctrl = 0;
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        break;
 
         // Left/Right Alt pressed
-    case 0x0038: case 0xE038: kbd_state.alt = 1; break;
+    case 0x0038:
+    case 0xE038:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.alt = 1;
+        break;
 
         // Left/Right Alt released
-    case 0x00B8: case 0xE0B8: kbd_state.alt = 0; break;
+    case 0x00B8:
+    case 0xE0B8:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.alt = 0;
+        break;
 
         // Left/Right Shift pressed
-    case 0x02A: case 0x0036: kbd_state.shift = 1; break;
+    case 0x02A:
+    case 0x0036:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.shift = 1;
+        break;
 
         // Left/Right Shift released
-    case 0x00AA: case 0x00B6: kbd_state.shift = 0; break;
+    case 0x00AA:
+    case 0x00B6:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.shift = 0;
+        break;
 
         // Left/Right GUI/Super pressed
-    case 0xE05B: case 0xE05C: kbd_state.super = 1; break;
+    case 0xE05B:
+    case 0xE05C:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.super = 1;
+        break;
 
         // Left/Right GUI/Super released
-    case 0xE0DC: case 0xE0DB: kbd_state.super = 0; break;
+    case 0xE0DC:
+    case 0xE0DB:
+        kbd_state.row = 0;
+        kbd_state.col = 0;
+        kbd_state.super = 0;
+        break;
 
         // Capslock pressed
     case 0x003A:
@@ -156,22 +205,66 @@ void _kbd_do_irq(int dev_id) {
         kbd_state.col = 0;
         break;
     }
+    // If buffer isn't full and a key is pressed
+    if(!buffer_full && kbd_state.state & 0xFF) {
+        // Write key to buffer
+        kbd_buffer[write_index] = kbd_state;
+        // Increment write_index
+        write_index = (write_index + 1)%BUFFER_SIZE;
+
+        // If buffer full, disable writing
+        if (write_index == read_index)
+            buffer_full = 1;
+    }
 
     e0_waiting = 0;
+    //Ready to read if key is pressed
     kbd_ready = 1;
-}
 
+}
 
 void kbd_init(irqaction* keyboard_handler) {
     keyboard_handler->handle = _kbd_do_irq;
     keyboard_handler->dev_id = 0x21;
     keyboard_handler->next = NULL;
 
+    kbd_ops.open = kbd_open;
+    kbd_ops.close = kbd_close;
+    kbd_ops.read = kbd_read;
+    kbd_ops.write = kbd_write;
+
     irq_desc[0x1] = keyboard_handler;
     enable_irq(1);
 }
 
-int8_t _kbd_to_ascii(kbd_t key) {
+int32_t kbd_open(const int8_t* filename) {
+    return 0;
+}
+
+int32_t kbd_close(int32_t fd) {
+    return 0;
+}
+
+int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
+    return -1;
+}
+
+int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
+    nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
+    uint32_t i = 0;
+    while(i < nbytes){
+        if(read_index != write_index){
+            *((kbd_t*)buf) = kbd_buffer[read_index];
+            read_index = (read_index + 1)%BUFFER_SIZE;
+            i += sizeof(kbd_t);
+        }else{
+            return i;
+        }
+    }
+    return i;
+}
+
+int8_t kbd_to_ascii(kbd_t key) {
     int8_t out;
     if (!key.shift) {
         out = ascii_lookup[key.row][key.col];
@@ -192,7 +285,7 @@ int8_t _kbd_to_ascii(kbd_t key) {
 }
 
 void _kbd_print_ascii(kbd_t key) {
-    int8_t k = _kbd_to_ascii(key);
+    int8_t k = kbd_to_ascii(key);
     if (k) {
         printf("%c", k);
     }
