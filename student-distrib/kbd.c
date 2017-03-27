@@ -257,6 +257,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             *((kbd_t*)buf) = kbd_buffer[read_index];
             read_index = (read_index + 1)%BUFFER_SIZE;
             i += sizeof(kbd_t);
+            buffer_full = 0;
         }else{
             return i;
         }
