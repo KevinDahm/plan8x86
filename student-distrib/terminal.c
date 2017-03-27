@@ -100,7 +100,7 @@ void rtc_test(){
     while(1){
         read(fd_rtc, &dummy, 4);
         printf("1");
-        if (kbd_read(0, &k, 2)) {
+        while (kbd_read(0, &k, 2)) {
             if(kbd_equal(k, F4_KEY)){
                 rtc_freq <<= 1;
                 if(rtc_freq > RTC_MAX_FREQ)
