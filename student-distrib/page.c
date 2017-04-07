@@ -1,9 +1,6 @@
 #include "page.h"
 #include "lib.h"
 
-#define VIDEO   0x000B8000
-#define KERNEL  0x00400000
-
 /* init_paging
  * Description: Sets flags and moves directory address to CR3
  * Inputs:      None
@@ -13,8 +10,6 @@
  */
 void init_paging(){
     asm volatile("              \n\
-    movl    %0, %%cr3           \n\
-                                \n\
     movl    %%cr4, %%eax        \n\
     orl     $0x00000010, %%eax  \n\
     movl    %%eax, %%cr4        \n\
@@ -24,7 +19,16 @@ void init_paging(){
     movl    %%eax, %%cr0        \n\
     "
                  : /* no outputs */
-                 : "a"(page_directory_table)
+                 : /* no inputs  */
+        );
+}
+
+void switch_page_directory(int pd) {
+    asm volatile("              \n\
+    movl    %0, %%cr3           \n\
+    "
+                 : /* no outputs */
+                 : "a"(page_directory_tables[pd])
         );
 }
 
@@ -37,8 +41,9 @@ void init_paging(){
  * Side Effect: Tables are set to empty
  */
 void clear_tables() {
-    memset(page_directory_table, 2, DIR_SIZE * 4);
-    memset(page_table, 2, DIR_SIZE * 4);
+    // Write 2 to all pages, enableing read/write
+    memset(page_directory_tables, 2, NUM_DIRS * DIR_SIZE * 4);
+    memset(page_tables, 2, NUM_DIRS * DIR_SIZE * 4);
 }
 
 
@@ -50,50 +55,108 @@ void clear_tables() {
  * Side Effect: Entries are made in the paging tables
  */
 void create_entries() {
-    page_dir_kb_entry_t* kb_dir_entry = (page_dir_kb_entry_t*)page_directory_table;
-    kb_dir_entry->addr = (uint32_t)page_table >> 12;//Lose lower 12 bits (keep 20 high bits)
-    kb_dir_entry->avail = 0;
-    kb_dir_entry->global = 0;
-    kb_dir_entry->pageSize = 0;     //0 for kb
-    kb_dir_entry->reserved = 0;
-    kb_dir_entry->accessed = 0;
-    kb_dir_entry->cacheDisabled = 0;
-    kb_dir_entry->writeThrough = 1; //1 for fun
-    kb_dir_entry->userSupervisor = 0;
-    kb_dir_entry->readWrite = 1;    //Write enabled
-    kb_dir_entry->present = 1;
+    // KERNEL
+    {
+        page_dir_kb_entry_t* page_table_entry = (page_dir_kb_entry_t*)page_directory_tables[0];
+        page_table_entry->addr = (uint32_t)page_tables[0] >> 12;//Lose lower 12 bits (keep 20 high bits)
+        page_table_entry->avail = 0;
+        page_table_entry->global = 0;
+        page_table_entry->pageSize = 0;     //0 for kb
+        page_table_entry->reserved = 0;
+        page_table_entry->accessed = 0;
+        page_table_entry->cacheDisabled = 0;
+        page_table_entry->writeThrough = 1; //1 for fun
+        page_table_entry->userSupervisor = 0;
+        page_table_entry->readWrite = 1;    //Write enabled
+        page_table_entry->present = 1;
 
-    page_table_kb_entry_t* table_entry =
-        (page_table_kb_entry_t*)(page_table + (VIDEO >> 12));
-    table_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits)
-    table_entry->avail = 0;
-    table_entry->global = 0;
-    table_entry->pgTblAttIdx = 0;
-    table_entry->dirty = 0;
-    table_entry->accessed = 0;
-    table_entry->cacheDisabled = 0;
-    table_entry->writeThrough = 1;  //1 for fun
-    table_entry->userSupervisor = 0;
-    table_entry->readWrite = 1;     //Write enabled
-    table_entry->present = 1;
+        page_table_kb_entry_t* video_entry =
+            (page_table_kb_entry_t*)(page_tables[0] + (VIDEO >> 12));
+        video_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits)
+        video_entry->avail = 0;
+        video_entry->global = 0;
+        video_entry->pgTblAttIdx = 0;
+        video_entry->dirty = 0;
+        video_entry->accessed = 0;
+        video_entry->cacheDisabled = 0;
+        video_entry->writeThrough = 1;  //1 for fun
+        video_entry->userSupervisor = 0;
+        video_entry->readWrite = 1;     //Write enabled
+        video_entry->present = 1;
 
-    page_dir_mb_entry_t* mb_dir_entry = (page_dir_mb_entry_t*)(page_directory_table+1);
-    mb_dir_entry->addr = KERNEL >> 22;  //Lose lower 22 bits (keep 10 high bits)
-    mb_dir_entry->reserved = 0;
-    mb_dir_entry->pgTblAttIdx = 0;
-    mb_dir_entry->avail = 0;
-    mb_dir_entry->global = 1;       //1 for global buffer usage
-    mb_dir_entry->pageSize = 1;     //1 for mb
-    mb_dir_entry->reserved = 0;
-    mb_dir_entry->accessed = 0;
-    mb_dir_entry->cacheDisabled = 0;
-    mb_dir_entry->writeThrough = 1; //1 or fun
-    mb_dir_entry->userSupervisor = 0;
-    mb_dir_entry->readWrite = 1;    //Write enabled
-    mb_dir_entry->present = 1;
+        page_dir_mb_entry_t* kernel_entry = (page_dir_mb_entry_t*)(page_directory_tables[0]+1);
+        kernel_entry->addr = KERNEL >> 22;  //Lose lower 22 bits (keep 10 high bits)
+        kernel_entry->reserved = 0;
+        kernel_entry->pgTblAttIdx = 0;
+        kernel_entry->avail = 0;
+        kernel_entry->global = 1;       //1 for global buffer usage
+        kernel_entry->pageSize = 1;     //1 for mb
+        kernel_entry->reserved = 0;
+        kernel_entry->accessed = 0;
+        kernel_entry->cacheDisabled = 0;
+        kernel_entry->writeThrough = 1; //1 or fun
+        kernel_entry->userSupervisor = 0;
+        kernel_entry->readWrite = 1;    //Write enabled
+        kernel_entry->present = 1;
+    }
+    // TASK 1
+    int task;
+    for (task = 1; task <= 2; task++) {
+        page_dir_kb_entry_t* page_table_entry = (page_dir_kb_entry_t*)page_directory_tables[task];
+        page_table_entry->addr = (uint32_t)page_tables[task] >> 12;//Lose lower 12 bits (keep 20 high bits)
+        page_table_entry->avail = 0;
+        page_table_entry->global = 0;
+        page_table_entry->pageSize = 0;     //0 for kb
+        page_table_entry->reserved = 0;
+        page_table_entry->accessed = 0;
+        page_table_entry->cacheDisabled = 0;
+        page_table_entry->writeThrough = 1; //1 for fun
+        page_table_entry->userSupervisor = 0;
+        page_table_entry->readWrite = 1;    //Write enabled
+        page_table_entry->present = 1;
 
-    /* printf("Entry 0: %x\n", page_directory_table[0]); */
-    /* printf("Entry 0->0xB8: %x\n", page_table[0xB8]); */
-    /* printf("Entry 1: %x\n", page_directory_table[1]); */
-    /* printf("Entry 2: %x\n", page_directory_table[2]); */
+        page_table_kb_entry_t* video_entry =
+            (page_table_kb_entry_t*)(page_tables[task] + (VIDEO >> 12));
+        video_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits)
+        video_entry->avail = 0;
+        video_entry->global = 0;
+        video_entry->pgTblAttIdx = 0;
+        video_entry->dirty = 0;
+        video_entry->accessed = 0;
+        video_entry->cacheDisabled = 0;
+        video_entry->writeThrough = 1;  //1 for fun
+        video_entry->userSupervisor = 0;
+        video_entry->readWrite = 1;     //Write enabled
+        video_entry->present = 1;
+
+        page_dir_mb_entry_t* kernel_entry = (page_dir_mb_entry_t*)(page_directory_tables[task]+1);
+        kernel_entry->addr = KERNEL >> 22;  //Lose lower 22 bits (keep 10 high bits)
+        kernel_entry->reserved = 0;
+        kernel_entry->pgTblAttIdx = 0;
+        kernel_entry->avail = 0;
+        kernel_entry->global = 1;       //1 for global buffer usage
+        kernel_entry->pageSize = 1;     //1 for mb
+        kernel_entry->reserved = 0;
+        kernel_entry->accessed = 0;
+        kernel_entry->cacheDisabled = 0;
+        kernel_entry->writeThrough = 1; //1 or fun
+        kernel_entry->userSupervisor = 1;
+        kernel_entry->readWrite = 1;    //Write enabled
+        kernel_entry->present = 1;
+
+        page_dir_mb_entry_t* task1_entry = (page_dir_mb_entry_t*)(page_directory_tables[task]+32); // 128MB virtual
+        task1_entry->addr = (0x00400000 * (task + 1)) >> 22;  // 4MB for each task starting at physical address 8MB.
+        task1_entry->reserved = 0;
+        task1_entry->pgTblAttIdx = 0;
+        task1_entry->avail = 0;
+        task1_entry->global = 1;       //1 for global buffer usage
+        task1_entry->pageSize = 1;     //1 for mb
+        task1_entry->reserved = 0;
+        task1_entry->accessed = 0;
+        task1_entry->cacheDisabled = 0;
+        task1_entry->writeThrough = 1; //1 or fun
+        task1_entry->userSupervisor = 1; // TODO: set to 1 for user-level 3
+        task1_entry->readWrite = 1;    //Write enabled
+        task1_entry->present = 1;
+    }
 }

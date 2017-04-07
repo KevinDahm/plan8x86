@@ -72,7 +72,7 @@ file_ops_t filesys_ops;
 
 typedef struct file_desc {
     file_ops_t *ops;
-    uint32_t inode;
+    int32_t inode;
     int32_t file_pos;
     int32_t flags;
 } file_desc_t;

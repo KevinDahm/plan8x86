@@ -15,7 +15,7 @@ ALL: cat grep hello ls pingpong counter shell sigtest testprint syserr
 
 %: %.exe
 	../elfconvert $<
-	mv $<.converted to_fsdir/$@
+	mv $<.converted ../fsdir/$@
 
 clean::
 	rm -f *~ *.o

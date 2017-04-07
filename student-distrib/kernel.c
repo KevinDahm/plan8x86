@@ -137,7 +137,7 @@ entry (unsigned long magic, unsigned long addr)
         the_tss_desc.avail          = 0;
         the_tss_desc.seg_lim_19_16  = TSS_SIZE & 0x000F0000;
         the_tss_desc.present        = 1;
-        the_tss_desc.dpl            = 0x0;
+        the_tss_desc.dpl            = 0x3;
         the_tss_desc.sys            = 0;
         the_tss_desc.type           = 0x9;
         the_tss_desc.seg_lim_15_00  = TSS_SIZE & 0x0000FFFF;
@@ -149,12 +149,15 @@ entry (unsigned long magic, unsigned long addr)
         tss.ldt_segment_selector = KERNEL_LDT;
         tss.ss0 = KERNEL_DS;
         tss.esp0 = 0x800000;
-        ltr(KERNEL_TSS);
+        /* tss.cs = (KERNEL_CS | 0x3); */
+        /* tss.ss = tss.ds = tss.es = tss.fs = tss.gs = (KERNEL_DS | 0x3); */
+        ltr(KERNEL_TSS | 0x3);
     }
 
     // Paging setup
     clear_tables();
     create_entries();
+    switch_page_directory(0);
     init_paging();
 
     /* Init the PIC */
@@ -210,7 +213,7 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    test();
+    sys_execute((uint8_t*)"shell");
 
 /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
