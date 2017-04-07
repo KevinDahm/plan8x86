@@ -149,9 +149,7 @@ entry (unsigned long magic, unsigned long addr)
         tss.ldt_segment_selector = KERNEL_LDT;
         tss.ss0 = KERNEL_DS;
         tss.esp0 = 0x800000;
-        /* tss.cs = (KERNEL_CS | 0x3); */
-        /* tss.ss = tss.ds = tss.es = tss.fs = tss.gs = (KERNEL_DS | 0x3); */
-        ltr(KERNEL_TSS | 0x3);
+        ltr(KERNEL_TSS);
     }
 
     // Paging setup
@@ -213,7 +211,7 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    sys_execute((uint8_t*)"shell");
+    sys_execute((uint8_t*)"ls");
 
 /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");

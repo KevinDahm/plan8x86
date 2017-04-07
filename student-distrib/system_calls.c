@@ -10,7 +10,6 @@
 void *cleanup_ptr;
 
 int32_t sys_halt(uint8_t status) {
-    printf("BACK IN KERNEL");
     asm volatile(".3: hlt; jmp .3;");
     return 0;
 }
@@ -44,8 +43,13 @@ int32_t sys_execute(const uint8_t* command) {
 
     uint32_t start = ((uint32_t *)buf)[6];
 
-    // Cast start to a pointer to a function returning int and taking void then call start
-    // TODO: Set up TSS and iret into _start
+    uint32_t esp0;
+
+    asm volatile("movl %%esp, %0;"
+        : "=r"(esp0)
+        :);
+    tss.esp0 = esp0;
+
     asm volatile("                      \n\
     cli                                 \n\
     movw $0x2B, %%ax                    \n\

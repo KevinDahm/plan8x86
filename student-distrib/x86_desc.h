@@ -13,7 +13,7 @@
 #define KERNEL_DS 0x0018
 #define USER_CS 0x0023
 #define USER_DS 0x002B
-#define KERNEL_TSS 0x0030 // TODO: This should be 0x0030 probably :/
+#define KERNEL_TSS 0x0033
 #define KERNEL_LDT 0x0038
 
 /* Size of the task state segment (TSS) */
