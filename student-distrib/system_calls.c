@@ -7,13 +7,17 @@
 #include "page.h"
 #include "x86_desc.h"
 
+#define st(a) #a
+#define str(a) st(a)
+
 void *cleanup_ptr;
+
+uint8_t task_num = 0;
 
 int32_t sys_halt(uint8_t status) {
     asm volatile(".3: hlt; jmp .3;");
     return 0;
 }
-
 
 int32_t sys_execute(const uint8_t* command) {
     // TODO: Parse command
@@ -24,12 +28,12 @@ int32_t sys_execute(const uint8_t* command) {
     }
 
     // TODO: Don't always use task 1
-    switch_page_directory(1);
+    switch_page_directory(task_num + 1);
 
     fstat_t stats;
     sys_stat(fd, &stats, sizeof(fstat_t));
 
-    int8_t *buf = (int8_t*)0x08048000;
+    int8_t *buf = (int8_t*)(TASK_ADDR(task_num) + USR_CODE_OFFSET);
 
     sys_read(fd, (void*)buf, stats.size);
 
@@ -50,30 +54,29 @@ int32_t sys_execute(const uint8_t* command) {
         :);
     tss.esp0 = esp0;
 
-    asm volatile("                      \n\
-    cli                                 \n\
-    movw $0x2B, %%ax                    \n\
-    movw %%ax, %%ds                     \n\
-    movw %%ax, %%es                     \n\
-    movw %%ax, %%fs                     \n\
-    movw %%ax, %%gs                     \n\
-                                        \n\
-    pushl $0x2B                         \n\
-    pushl $0x08400000                   \n\
-    pushf                               \n\
-    popl %%eax                          \n\
-    orl $0x200, %%eax                   \n\
-    pushl %%eax                         \n\
-    pushl $0x23                         \n\
-    pushl %0                            \n\
-    iret                                \n\
+    uint32_t user_stack_addr = TASK_ADDR(task_num) + MB4;
+
+    asm volatile("                             \n\
+    cli                                        \n\
+    movw $" str(USER_DS) ", %%ax               \n\
+    movw %%ax, %%ds                            \n\
+    movw %%ax, %%es                            \n\
+    movw %%ax, %%fs                            \n\
+    movw %%ax, %%gs                            \n\
+                                               \n\
+    pushl $" str(USER_DS) "                    \n\
+    pushl %1                                   \n\
+    pushf                                      \n\
+    popl %%eax                                 \n\
+    orl $0x200, %%eax                          \n\
+    pushl %%eax                                \n\
+    pushl $" str(USER_CS) "                    \n\
+    pushl %0                                   \n\
+    iret                                       \n\
     "
                  :
-                 : "b"(start)
-        );
+                 : "b"(start), "c"(user_stack_addr));
 
-    printf("\nTHIS SHOULD NOT HAVE BEEN REACHED PLEASE REBOOT\n");
-    asm volatile(".2: jmp .2;");
     return -1;
 }
 

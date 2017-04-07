@@ -6,6 +6,10 @@
 #define NUM_DIRS 3 // Number of tasks + 1 for kernel
 #define VIDEO   0x000B8000
 #define KERNEL  0x00400000
+#define MB 0x00100000
+#define MB4 0x00400000
+#define TASK_ADDR(x) (((x * 4) + 128) * MB)
+#define USR_CODE_OFFSET 0x48000
 
 typedef struct __attribute__((packed)) page_dir_kb_entry{
     uint32_t present : 1;
