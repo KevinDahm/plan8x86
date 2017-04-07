@@ -23,4 +23,3 @@ clean::
 clear: clean
 	rm -f *.converted
 	rm -f *.exe
-	rm -f to_fsdir/*
