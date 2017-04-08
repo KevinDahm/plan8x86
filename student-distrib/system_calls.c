@@ -6,43 +6,89 @@
 #include "terminal.h"
 #include "page.h"
 #include "x86_desc.h"
+#include "task.h"
 
 #define st(a) #a
 #define str(a) st(a)
 
 void *cleanup_ptr;
 
-uint8_t task_num = 0;
-
 int32_t sys_halt(uint8_t status) {
-    asm volatile(".3: hlt; jmp .3;");
+    int i;
+    for (i = 0; i < FILE_DESCS_LENGTH; i++) {
+        if (tasks[cur_task].file_descs[i].flags != FD_CLEAR) {
+            sys_close(i);
+        }
+    }
+
+    tasks[cur_task].status = TASK_EMPTY;
+
+    cur_task = tasks[cur_task].parent;
+
+    switch_page_directory(cur_task);
+
+    uint32_t ebp = tasks[cur_task].regs.ebp;
+
+    asm volatile(" \n\
+    movl %0, %%ebp \n"
+                 :
+                 : "r"(ebp));
+
     return 0;
 }
 
 int32_t sys_execute(const uint8_t* command) {
-    // TODO: Parse command
+    cleanup_ptr = &&execute_return;
+
+    uint32_t ebp;
+
+    asm volatile(" \n\
+    movl %%ebp, %0 \n"
+                 : "=r"(ebp)
+                 :);
+    tasks[cur_task].regs.ebp = ebp;
+    /* tasks[cur_task].regs.esp = ebp + 4; */
+    /* r -= 20; */
+    /* memcpy(&tasks[cur_task].regs, r, sizeof(regs_t)); */
+
+
     int32_t fd;
-    int32_t ret = 0;
+    uint8_t task_num;
+    for (task_num = 1; task_num < NUM_TASKS; task_num++) {
+        if (tasks[task_num].status == TASK_EMPTY) {
+            break;
+        }
+    }
+
+    if (task_num >= NUM_TASKS) {
+        return -1;
+    }
+
+    tasks[task_num].parent = cur_task;
+    cur_task = task_num;
+
+    sys_open((uint8_t *)"/dev/stdin");
+    sys_open((uint8_t *)"/dev/stdout");
+
+    // TODO: Parse command
+
     if ((fd = sys_open(command)) == -1) {
         return -1;
     }
 
-    // TODO: Don't always use task 1
-    switch_page_directory(task_num + 1);
+    switch_page_directory(cur_task);
 
     fstat_t stats;
     sys_stat(fd, &stats, sizeof(fstat_t));
 
-    int8_t *buf = (int8_t*)(TASK_ADDR(task_num) + USR_CODE_OFFSET);
+    int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
 
     sys_read(fd, (void*)buf, stats.size);
 
     if (buf[0] != 0x7F || buf[1] != 0x45 || buf[2] != 0x4C || buf[3] != 0x46) {
         // File is not executable
-        ret = -1;
-
         sys_close(fd);
-        return ret;
+        return -1;
     }
 
     uint32_t start = ((uint32_t *)buf)[6];
@@ -54,7 +100,7 @@ int32_t sys_execute(const uint8_t* command) {
         :);
     tss.esp0 = esp0;
 
-    uint32_t user_stack_addr = TASK_ADDR(task_num) + MB4;
+    uint32_t user_stack_addr = TASK_ADDR + MB4;
 
     asm volatile("                             \n\
     cli                                        \n\
@@ -76,28 +122,28 @@ int32_t sys_execute(const uint8_t* command) {
     "
                  :
                  : "b"(start), "c"(user_stack_addr));
-
-    return -1;
+execute_return:
+    return 0;
 }
 
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
-    switch (file_descs[fd].flags) {
+    switch (tasks[cur_task].file_descs[fd].flags) {
     case FD_DIR:
     case FD_FILE:
     case FD_RTC:
     case FD_KBD:
     case FD_STDIN:
-        return (*file_descs[fd].ops->read)(fd, buf, nbytes);
+        return (*tasks[cur_task].file_descs[fd].ops->read)(fd, buf, nbytes);
     default:
         return -1;
     }
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
-    switch (file_descs[fd].flags) {
+    switch (tasks[cur_task].file_descs[fd].flags) {
     case FD_RTC:
     case FD_STDOUT:
-        return (*file_descs[fd].ops->write)(fd, buf, nbytes);
+        return (*tasks[cur_task].file_descs[fd].ops->write)(fd, buf, nbytes);
     default:
         return -1;
     }
@@ -106,54 +152,54 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
 int32_t sys_open(const uint8_t* filename) {
     // TODO: stdio
     if (!strncmp((int8_t*)filename, "/dev/stdin", strlen("/dev/stdin"))) {
-        file_descs[0].ops = &stdin_ops;
-        file_descs[0].inode = NULL;
-        file_descs[0].flags = FD_STDIN;
+        tasks[cur_task].file_descs[0].ops = &stdin_ops;
+        tasks[cur_task].file_descs[0].inode = NULL;
+        tasks[cur_task].file_descs[0].flags = FD_STDIN;
         return 0;
     }
     if (!strncmp((int8_t*)filename, "/dev/stdout", strlen("/dev/stdout"))) {
-        file_descs[1].ops  = &stdout_ops;
-        file_descs[1].inode = NULL;
-        file_descs[1].flags = FD_STDOUT;
+        tasks[cur_task].file_descs[1].ops  = &stdout_ops;
+        tasks[cur_task].file_descs[1].inode = NULL;
+        tasks[cur_task].file_descs[1].flags = FD_STDOUT;
         return 1;
   }
     int i;
     for (i = 2; i < FILE_DESCS_LENGTH; i++) {
-        if (file_descs[i].flags == 0) {
+        if (tasks[cur_task].file_descs[i].flags == 0) {
             break;
         }
     }
     if (i < FILE_DESCS_LENGTH) {
         if (!strncmp((int8_t*)filename, "/dev/rtc", strlen("/dev/rtc"))) {
-            file_descs[i].ops = &rtc_ops;
-            file_descs[i].inode = NULL;
-            file_descs[i].flags = FD_RTC;
+            tasks[cur_task].file_descs[i].ops = &rtc_ops;
+            tasks[cur_task].file_descs[i].inode = NULL;
+            tasks[cur_task].file_descs[i].flags = FD_RTC;
             return i;
         }
 
         if (!strncmp((int8_t*)filename, "/dev/kbd", strlen("/dev/kbd"))) {
-            file_descs[i].ops = &kbd_ops;
-            file_descs[i].inode = NULL;
-            file_descs[i].flags = FD_KBD;
+            tasks[cur_task].file_descs[i].ops = &kbd_ops;
+            tasks[cur_task].file_descs[i].inode = NULL;
+            tasks[cur_task].file_descs[i].flags = FD_KBD;
             return i;
         }
 
-        file_descs[i].inode = (*filesys_ops.open)((int8_t*)filename);
-        if (file_descs[i].inode == -1) {
+        tasks[cur_task].file_descs[i].inode = (*filesys_ops.open)((int8_t*)filename);
+        if (tasks[cur_task].file_descs[i].inode == -1) {
             return -1;
         }
         dentry_t d;
         if (read_dentry_by_name((int8_t*)filename, &d) == 0) {
 
-            file_descs[i].ops = &filesys_ops;
+            tasks[cur_task].file_descs[i].ops = &filesys_ops;
             switch (d.type) {
             case 1:
-                file_descs[i].file_pos = get_index((int8_t*)filename);
-                file_descs[i].flags = FD_DIR;
+                tasks[cur_task].file_descs[i].file_pos = get_index((int8_t*)filename);
+                tasks[cur_task].file_descs[i].flags = FD_DIR;
                 break;
             case 2:
-                file_descs[i].file_pos = 0;
-                file_descs[i].flags = FD_FILE;
+                tasks[cur_task].file_descs[i].file_pos = 0;
+                tasks[cur_task].file_descs[i].flags = FD_FILE;
                 break;
             default:
                 return -1;
@@ -171,8 +217,8 @@ int32_t sys_open(const uint8_t* filename) {
 int32_t sys_close(int32_t fd) {
     if (fd >= FILE_DESCS_LENGTH || fd < 2)
         return -1;
-    file_descs[fd].flags = 0;
-    return (*file_descs[fd].ops->close)(fd);
+    tasks[cur_task].file_descs[fd].flags = 0;
+    return (*tasks[cur_task].file_descs[fd].ops->close)(fd);
     return 0;
 }
 
@@ -194,15 +240,14 @@ int32_t sys_sigreturn(void) {
 
 // TODO: processes
 void system_calls_init() {
-    sys_open((uint8_t *)"/dev/stdin");
-    sys_open((uint8_t *)"/dev/stdout");
+    cur_task = 0;
 }
 
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
-    switch (file_descs[fd].flags) {
+    switch (tasks[cur_task].file_descs[fd].flags) {
     case FD_FILE:
     case FD_DIR:
-        return (*file_descs[fd].ops->stat)(fd, buf, nbytes);
+        return (*tasks[cur_task].file_descs[fd].ops->stat)(fd, buf, nbytes);
     default:
         return -1;
     }

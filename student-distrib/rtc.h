@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "filesystem.h"
+#include "task.h"
 
 #define RTC_PORT 0x70
 #define CHOOSE_RTC_A 0x8A

@@ -15,6 +15,7 @@
 #include "system_calls.h"
 #include "test.h"
 #include "terminal.h"
+#include "task.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -153,8 +154,7 @@ entry (unsigned long magic, unsigned long addr)
     }
 
     // Paging setup
-    clear_tables();
-    create_entries();
+    create_init();
     switch_page_directory(0);
     init_paging();
 
@@ -211,8 +211,9 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    sys_execute((uint8_t*)"ls");
+    sys_execute((uint8_t*)"shell");
 
+    printf("Returned properly");
 /* Spin (nicely, so we don't chew up cycles) */
     asm volatile(".1: hlt; jmp .1;");
 }

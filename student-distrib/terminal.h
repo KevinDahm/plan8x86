@@ -2,6 +2,7 @@
 #define TERMINAL_H
 #include "types.h"
 #include "filesystem.h"
+#include "task.h"
 
 extern void terminal_init();
 extern int32_t terminal_open(const int8_t* filename);
