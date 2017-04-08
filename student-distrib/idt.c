@@ -135,11 +135,11 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
     set_cursor(35, 11);
     printf("page_fault\n");
     set_cursor(35, 12);
-    uint32_t bad_addr;
-    asm volatile("movl %%CR2, %0; \n"
-        : "=r" (bad_addr)
-        : );
-    printf("0x%#x", bad_addr);
+    /* uint32_t bad_addr; */
+    /* asm volatile("movl %%CR2, %0; \n" */
+    /*     : "=r" (bad_addr) */
+    /*     : ); */
+    printf("0x%#x", regs->eip);
     hang();
 }
 

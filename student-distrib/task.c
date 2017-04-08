@@ -92,7 +92,7 @@ void create_init() {
         kernel_entry->accessed = 0;
         kernel_entry->cacheDisabled = 0;
         kernel_entry->writeThrough = 1; //1 or fun
-        kernel_entry->userSupervisor = 1;
+        kernel_entry->userSupervisor = 0;
         kernel_entry->readWrite = 1;    //Write enabled
         kernel_entry->present = 1;
 

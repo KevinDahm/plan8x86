@@ -11,8 +11,6 @@
 #define st(a) #a
 #define str(a) st(a)
 
-void *cleanup_ptr;
-
 int32_t sys_halt(uint8_t status) {
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
@@ -34,12 +32,12 @@ int32_t sys_halt(uint8_t status) {
                  :
                  : "r"(ebp));
 
+    /* tss.esp0 = ebp + 4; */
+
     return 0;
 }
 
 int32_t sys_execute(const uint8_t* command) {
-    cleanup_ptr = &&execute_return;
-
     uint32_t ebp;
 
     asm volatile(" \n\
@@ -66,6 +64,7 @@ int32_t sys_execute(const uint8_t* command) {
 
     tasks[task_num].parent = cur_task;
     cur_task = task_num;
+    tasks[cur_task].status = TASK_RUNNING;
 
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
@@ -76,10 +75,10 @@ int32_t sys_execute(const uint8_t* command) {
         return -1;
     }
 
-    switch_page_directory(cur_task);
-
     fstat_t stats;
     sys_stat(fd, &stats, sizeof(fstat_t));
+
+    switch_page_directory(cur_task);
 
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
 
@@ -122,7 +121,6 @@ int32_t sys_execute(const uint8_t* command) {
     "
                  :
                  : "b"(start), "c"(user_stack_addr));
-execute_return:
     return 0;
 }
 
