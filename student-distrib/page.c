@@ -29,7 +29,7 @@ void switch_page_directory(int pd) {
     movl    %0, %%cr3           \n\
     "
                  : /* no outputs */
-                 : "a"(tasks[pd].page_directory_tables)
+                 : "a"(tasks[pd]->page_directory)
         );
 }
 

@@ -40,13 +40,13 @@ int32_t filesys_close(int32_t fd) {
 }
 int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     dentry_t e;
-    switch(tasks[cur_task].file_descs[fd].flags) {
+    switch(tasks[cur_task]->file_descs[fd].flags) {
     case FD_FILE:
         ((fstat_t*)buf)->type = 2;
-        ((fstat_t*)buf)->size = get_size(tasks[cur_task].file_descs[fd].inode);
+        ((fstat_t*)buf)->size = get_size(tasks[cur_task]->file_descs[fd].inode);
         break;
     case FD_DIR:
-        read_dentry_by_index(tasks[cur_task].file_descs[fd].file_pos - 1, &e);
+        read_dentry_by_index(tasks[cur_task]->file_descs[fd].file_pos - 1, &e);
         ((fstat_t*)buf)->type = e.type;
         ((fstat_t*)buf)->size = get_size(e.inode);
         break;
@@ -59,14 +59,14 @@ int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
 // TODO: Should this have access to file_descs?
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
     int32_t read;
-    switch (tasks[cur_task].file_descs[fd].flags) {
+    switch (tasks[cur_task]->file_descs[fd].flags) {
     case FD_FILE:
-        read = read_data(tasks[cur_task].file_descs[fd].inode, tasks[cur_task].file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
-        tasks[cur_task].file_descs[fd].file_pos += read;
+        read = read_data(tasks[cur_task]->file_descs[fd].inode, tasks[cur_task]->file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+        tasks[cur_task]->file_descs[fd].file_pos += read;
         break;
     case FD_DIR:
-        read = read_dir_data(tasks[cur_task].file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
-        tasks[cur_task].file_descs[fd].file_pos++;
+        read = read_dir_data(tasks[cur_task]->file_descs[fd].file_pos, (uint8_t*)buf, nbytes);
+        tasks[cur_task]->file_descs[fd].file_pos++;
         break;
     default:
         return -1;

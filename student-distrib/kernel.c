@@ -20,6 +20,10 @@
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
 
+// NOTE: These cannot be declared on the stack because the kernel stack is destroyed when user processes start
+irqaction keyboard_handler;
+irqaction rtc_handler;
+
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
 void
@@ -191,11 +195,11 @@ entry (unsigned long magic, unsigned long addr)
     set_system_gate(0x80, system_call);
 
     // Initialize RTC, does not enable the interrupt
-    irqaction rtc_handler;
+
     rtc_init(&rtc_handler);
     set_intr_gate(0x28, irq_0x8);
     //Initialize keyboard and enable it's interrupts
-    irqaction keyboard_handler;
+
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 

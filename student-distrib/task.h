@@ -2,7 +2,6 @@
 #define TASK_H_
 
 #include "types.h"
-#include "page.h"
 
 void create_init();
 
@@ -64,13 +63,16 @@ typedef struct {
 typedef struct {
     int32_t status;
     file_desc_t file_descs[FILE_DESCS_LENGTH];
-    uint32_t page_directory_tables[DIR_SIZE] __attribute__((aligned (0x1000)));
-    uint32_t page_tables[DIR_SIZE] __attribute__((aligned (0x1000)));
+    uint32_t *page_directory;
+    uint32_t *page_table;
     regs_t regs;
     uint8_t parent;
+    uint32_t kernel_esp;
 } pcb_t;
 
-pcb_t tasks[NUM_TASKS];
+pcb_t init_pcb;
+
+pcb_t *tasks[NUM_TASKS];
 
 uint8_t cur_task;
 
