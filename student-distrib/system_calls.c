@@ -163,7 +163,7 @@ int32_t sys_open(const uint8_t* filename) {
         }
     }
     if (i < FILE_DESCS_LENGTH) {
-        if (!strncmp((int8_t*)filename, "/dev/rtc", strlen("/dev/rtc"))) {
+        if (!strncmp((int8_t*)filename, "rtc", strlen("rtc"))) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
