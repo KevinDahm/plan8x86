@@ -11,7 +11,7 @@
 #define st(a) #a
 #define str(a) st(a)
 
-int32_t sys_halt(uint8_t status) {
+int32_t sys_halt(uint32_t status) {
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {

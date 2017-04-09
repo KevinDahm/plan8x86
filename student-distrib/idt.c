@@ -17,9 +17,9 @@ void do_divide_error(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ndivide error\n");
+        printf("\ndivide error ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -32,9 +32,9 @@ void do_debug(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ndebug\n");
+        printf("\ndebug ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -47,9 +47,9 @@ void do_nmi(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nnmi\n");
+        printf("\nnmi ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -62,9 +62,9 @@ void do_int3(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nint3\n");
+        printf("\nint3 ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -77,9 +77,9 @@ void do_overflow(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\noverflow\n");
+        printf("\noverflow ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -92,9 +92,9 @@ void do_bounds(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nbounds\n");
+        printf("\nbounds ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -107,9 +107,9 @@ void do_invalid_op(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ninvalid_op\n");
+        printf("\ninvalid_op ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -122,9 +122,9 @@ void do_device_not_available(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ndevice_not_available\n");
+        printf("\ndevice_not_available ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -137,9 +137,9 @@ void do_double_fault(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ndouble fault");
+        printf("\ndouble fau ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -152,9 +152,9 @@ void do_coprocessor_segment_overrun(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ncoprocessor_segment_overrun\n");
+        printf("\ncoprocessor_segment_overrun ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -167,9 +167,9 @@ void do_invalid_TSS(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ninvalid_TSS\n");
+        printf("\ninvalid_TSS ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -182,9 +182,9 @@ void do_segment_not_present(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nsegment_not_present\n");
+        printf("\nsegment_not_present ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -197,9 +197,9 @@ void do_stack_segment(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nstack_segment\n");
+        printf("\nstack_segment ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -212,9 +212,9 @@ void do_general_protection(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ngeneral_protection\n");
+        printf("\ngeneral_protection ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -233,9 +233,9 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\npage_fault\n");
+        printf("\npage_fault ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -248,9 +248,9 @@ void do_coprocessor_error(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\ncoprocessor_error\n");
+        printf("\ncoprocessor_error ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -263,9 +263,9 @@ void do_alignment_check(const struct pt_regs* regs, uint32_t error) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nalignment_check\n");
+        printf("\nalignment_check ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -278,9 +278,9 @@ void do_machine_check(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nmachine_check\n");
+        printf("\nmachine_check ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
@@ -293,9 +293,9 @@ void do_simd_coprocessor_error(const struct pt_regs* regs) {
         printf("0x%#x", regs->eip);
         hang();
     } else {
-        printf("\nsimd_coprocessor_error\n");
+        printf("\nsimd_coprocessor_error ");
         printf("0x%#x", regs->eip);
-        sys_halt(-1);
+        sys_halt(256);
     }
 }
 
