@@ -68,6 +68,7 @@ typedef struct {
     regs_t regs;
     uint8_t parent;
     uint32_t kernel_esp;
+    uint8_t* arg_str;
 } pcb_t;
 
 pcb_t init_pcb;

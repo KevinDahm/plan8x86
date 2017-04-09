@@ -38,6 +38,9 @@ int32_t sys_halt(uint8_t status) {
 }
 
 int32_t sys_execute(const uint8_t* command) {
+    uint8_t com_str[strlen((int8_t*)command)];
+    strcpy((int8_t*)com_str, (int8_t*)command);
+
     uint32_t ebp;
 
     asm volatile(" \n\
@@ -70,8 +73,14 @@ int32_t sys_execute(const uint8_t* command) {
     sys_open((uint8_t *)"/dev/stdout");
 
     // TODO: Parse command
+    uint32_t i = 0;
+    while(com_str[i] != ' ' && com_str[i] != '\0') i++;
+    com_str[i] = '\0';
+    i++;
+    while(com_str[i] == ' ') i++;
+    tasks[cur_task]->arg_str = com_str + i;
 
-    if ((fd = sys_open(command)) == -1) {
+    if ((fd = sys_open(com_str)) == -1) {
         return -1;
     }
 
@@ -216,6 +225,10 @@ int32_t sys_close(int32_t fd) {
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
+    uint8_t* arg = tasks[cur_task]->arg_str;
+    uint32_t arg_len = strlen((int8_t*)arg);
+    uint32_t out_len = nbytes < arg_len ? nbytes : arg_len;
+    memcpy(buf, arg, out_len);
     return 0;
 }
 
