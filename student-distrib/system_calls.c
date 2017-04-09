@@ -34,7 +34,7 @@ int32_t sys_halt(uint8_t status) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    return 0;
+    return status;
 }
 
 int32_t sys_execute(const uint8_t* command) {
