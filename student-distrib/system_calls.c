@@ -11,6 +11,8 @@
 #define st(a) #a
 #define str(a) st(a)
 
+static uint32_t halt_status;
+
 int32_t sys_halt(uint32_t status) {
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
@@ -27,6 +29,10 @@ int32_t sys_halt(uint32_t status) {
 
     uint32_t ebp = tasks[cur_task]->regs.ebp;
 
+    // Save the return value before moving the stack.
+    // halt_status has to be static memory, it cannot be on the stack.
+    halt_status = status;
+
     asm volatile(" \n\
     movl %0, %%ebp \n"
                  :
@@ -34,7 +40,7 @@ int32_t sys_halt(uint32_t status) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    return status;
+    return halt_status;
 }
 
 int32_t sys_execute(const uint8_t* command) {
