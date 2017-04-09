@@ -3,7 +3,6 @@
 #include "kbd.h"
 #include "rtc.h"
 #include "system_calls.h"
-#include "user_system_calls.h"
 #include "i8259.h"
 
 /* void terminal_init()
@@ -93,22 +92,22 @@ void rtc_test(){
     set_cursor(0, 0);
     uint32_t rtc_freq = BASE_RTC_FREQ;
     uint32_t dummy;
-    uint32_t fd_rtc = open((uint8_t*)"/dev/rtc");
+    uint32_t fd_rtc = sys_open((uint8_t*)"/dev/rtc");
     kbd_t k;
-    write(fd_rtc, &rtc_freq, 4);
+    sys_write(fd_rtc, &rtc_freq, 4);
     enable_irq(8);
     while(1){
-        read(fd_rtc, &dummy, 4);
+        sys_read(fd_rtc, &dummy, 4);
         printf("1");
         while (kbd_read(0, &k, 2)) {
             if(kbd_equal(k, F4_KEY)){
                 rtc_freq <<= 1;
                 if(rtc_freq > RTC_MAX_FREQ)
                     rtc_freq = BASE_RTC_FREQ;
-                write(fd_rtc, &rtc_freq, 4);
+                sys_write(fd_rtc, &rtc_freq, 4);
             }else if(kbd_equal(k, F5_KEY)){
                 disable_irq(8);
-                close(fd_rtc);
+                sys_close(fd_rtc);
                 return;
             }
         }
@@ -120,33 +119,33 @@ void list_files(){
     clear();
     set_cursor(0,0);
     uint8_t dir[] = ".";
-    int32_t fd = open(dir);
+    int32_t fd = sys_open(dir);
     int8_t text[33];
     fstat_t data;
-    while((read(fd, text, 33) != 0)) {
+    while((sys_read(fd, text, 33) != 0)) {
         text[32] = 0;
         printf("File Name: %s",text);
         for(it = 0; it < 35 - strlen(text); it++)
             printf(" ");
-        stat(fd, &data, sizeof(fstat_t));
+        sys_stat(fd, &data, sizeof(fstat_t));
         printf("File Type: %d    File Size: %dB\n", data.type, data.size);
     }
-    close(fd);
+    sys_close(fd);
 }
 
 void list_file_name(uint8_t * name){
     clear();
     set_cursor(0,0);
-    int32_t fd = open(name);
+    int32_t fd = sys_open(name);
     fstat_t data;
-    stat(fd, &data, sizeof(fstat_t));
+    sys_stat(fd, &data, sizeof(fstat_t));
     uint32_t size = data.size + 1;
     int8_t text[size];
-    read(fd, text, size-1);
+    sys_read(fd, text, size-1);
     text[size - 1] = '\0';
-    write(1, text, size);
+    sys_write(1, text, size);
     printf("\nFile Name: %s", name);
-    close(fd);
+    sys_close(fd);
 }
 
 int32_t list_file_index(int32_t index){
@@ -154,25 +153,25 @@ int32_t list_file_index(int32_t index){
     clear();
     set_cursor(0,0);
     uint8_t dir[] = ".";
-    int32_t fd = open(dir);
+    int32_t fd = sys_open(dir);
     uint8_t name[33];
     int8_t test[33];
-    while((read(fd, name, 33) != 0) && it < index) {it++;}
-    if(read(fd, test, 33) == 0)
+    while((sys_read(fd, name, 33) != 0) && it < index) {it++;}
+    if(sys_read(fd, test, 33) == 0)
         index = 0;
     else
         index++;
     name[32] = 0;
-    uint32_t fd2 = open(name);
+    uint32_t fd2 = sys_open(name);
     fstat_t data;
-    if(stat(fd2, &data, sizeof(fstat_t)) == 0){
+    if(sys_stat(fd2, &data, sizeof(fstat_t)) == 0){
         int8_t text[data.size];
-        read(fd2, text, data.size);
-        write(1, text, data.size);
+        sys_read(fd2, text, data.size);
+        sys_write(1, text, data.size);
     }
     printf("\nFile Name: %s\n", name);
-    close(fd2);
-    close(fd);
+    sys_close(fd2);
+    sys_close(fd);
     return index;
 }
 

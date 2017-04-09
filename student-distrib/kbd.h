@@ -5,6 +5,7 @@
 #include "types.h"
 #include "idt.h"
 #include "filesystem.h"
+#include "task.h"
 
 // Struct for current kdb state
 typedef struct kbd {

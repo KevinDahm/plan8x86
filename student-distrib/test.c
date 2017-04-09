@@ -1,14 +1,16 @@
 #include "test.h"
 #include "system_calls.h"
-#include "user_system_calls.h"
-
+#include "page.h"
+#include "lib.h"
 
 #define BUF_SIZE 128
 
 void test() {
-    int8_t buf[BUF_SIZE];
+    sys_write(1, "Hello\n", 7);
 
-    while(1){
-        read(0, buf, BUF_SIZE);
-    }
+    switch_page_directory(1);
+
+    int32_t *MB128 = KERNEL * 32;
+    *MB128 = 5;
+    printf("%x", *MB128);
 }

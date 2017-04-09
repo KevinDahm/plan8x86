@@ -49,36 +49,4 @@ extern int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes);
 extern int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes);
 extern int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes);
 
-
-
-/* SYSTEM CALL FILE DATA *****************************************************/
-typedef struct file_ops {
-    int32_t (*open)(const int8_t*);
-    int32_t (*close)(int32_t);
-    int32_t (*read)(int32_t, void*, int32_t);
-    int32_t (*write)(int32_t, const void*, int32_t);
-    int32_t (*stat)(int32_t, void*, int32_t);
-} file_ops_t;
-
-file_ops_t filesys_ops;
-
-#define FD_CLEAR 0
-#define FD_DIR 1
-#define FD_FILE 2
-#define FD_STDIN 3
-#define FD_STDOUT 4
-#define FD_RTC 5
-#define FD_KBD 6
-
-typedef struct file_desc {
-    file_ops_t *ops;
-    uint32_t inode;
-    int32_t file_pos;
-    int32_t flags;
-} file_desc_t;
-
-#define FILE_DESCS_LENGTH 8
-// TODO: proccesses
-file_desc_t file_descs[FILE_DESCS_LENGTH];
-
 #endif
