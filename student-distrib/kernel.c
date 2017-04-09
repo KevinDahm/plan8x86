@@ -15,9 +15,14 @@
 #include "system_calls.h"
 #include "test.h"
 #include "terminal.h"
+#include "task.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
+
+// NOTE: These cannot be declared on the stack because the kernel stack is destroyed when user processes start
+irqaction keyboard_handler;
+irqaction rtc_handler;
 
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
@@ -137,7 +142,7 @@ entry (unsigned long magic, unsigned long addr)
         the_tss_desc.avail          = 0;
         the_tss_desc.seg_lim_19_16  = TSS_SIZE & 0x000F0000;
         the_tss_desc.present        = 1;
-        the_tss_desc.dpl            = 0x0;
+        the_tss_desc.dpl            = 0x3;
         the_tss_desc.sys            = 0;
         the_tss_desc.type           = 0x9;
         the_tss_desc.seg_lim_15_00  = TSS_SIZE & 0x0000FFFF;
@@ -153,8 +158,8 @@ entry (unsigned long magic, unsigned long addr)
     }
 
     // Paging setup
-    clear_tables();
-    create_entries();
+    create_init();
+    switch_page_directory(0);
     init_paging();
 
     /* Init the PIC */
@@ -190,11 +195,11 @@ entry (unsigned long magic, unsigned long addr)
     set_system_gate(0x80, system_call);
 
     // Initialize RTC, does not enable the interrupt
-    irqaction rtc_handler;
+
     rtc_init(&rtc_handler);
     set_intr_gate(0x28, irq_0x8);
     //Initialize keyboard and enable it's interrupts
-    irqaction keyboard_handler;
+
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
@@ -210,8 +215,5 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    test();
-
-/* Spin (nicely, so we don't chew up cycles) */
-    asm volatile(".1: hlt; jmp .1;");
+    sys_execute((uint8_t*)"shell");
 }

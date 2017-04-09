@@ -261,6 +261,8 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
         }else{
             return i;
         }
+        // Don't waste CPU cycles. Nothing's going to move until a kbd interrupt happens
+        asm volatile("hlt;");
     }
     return i;
 }
