@@ -11,7 +11,7 @@
 #define st(a) #a
 #define str(a) st(a)
 
-static uint32_t halt_status;
+uint32_t halt_status;
 
 int32_t sys_halt(uint32_t status) {
     int i;
@@ -26,6 +26,10 @@ int32_t sys_halt(uint32_t status) {
     cur_task = tasks[cur_task]->parent;
 
     switch_page_directory(cur_task);
+
+    if (cur_task == 0) {
+        sys_execute((uint8_t*)"shell");
+    }
 
     uint32_t ebp = tasks[cur_task]->regs.ebp;
 

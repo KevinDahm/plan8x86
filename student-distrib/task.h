@@ -6,7 +6,7 @@
 void create_init();
 
 #define FILE_DESCS_LENGTH 8
-#define NUM_TASKS 3
+#define NUM_TASKS 4
 
 typedef struct file_ops {
     int32_t (*open)(const int8_t*);
