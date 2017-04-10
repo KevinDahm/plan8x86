@@ -99,6 +99,8 @@ int32_t sys_execute(const uint8_t* command) {
 
     switch_page_directory(cur_task);
 
+    memset((void*)TASK_ADDR, 0, MB4);
+
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
 
     sys_read(fd, (void*)buf, stats.size);
