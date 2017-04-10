@@ -10,8 +10,7 @@
 #define BLUE 0x1F
 
 static int color = ATTRIB;
-static int screen_x;
-static int screen_y;
+
 static char* video_mem = (char *)VIDEO;
 
 /*
@@ -52,10 +51,19 @@ void blue_screen(void) {
  */
 
 void set_cursor(uint32_t x, uint32_t y){
+    while(x < 0){
+        x+=NUM_COLS;
+        y--;
+    }while(x >= NUM_COLS){
+        x-=NUM_COLS;
+        y++;
+    }
+    if(y < 0 || y >= NUM_ROWS)
+        return;
     screen_x = x;
     screen_y = y;
 
-    unsigned short position=(y*80) + x;
+    unsigned short position=(y*NUM_COLS) + x;
 
     // cursor LOW port to vga INDEX register
     outb(0x0F, 0x3D4);
@@ -243,13 +251,18 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
+    int i;
     if(c == '\n' || c == '\r') {
         screen_y++;
         screen_x=0;
         if(screen_y == NUM_ROWS){
             move_up();
         }
-    } else {
+    } else if(c == '\t'){
+        for(i = 0; i < 4; i++){
+            putc(' ');
+        }
+    }else {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
         screen_x++;
@@ -524,7 +537,7 @@ memcpy(void* dest, const void* src, uint32_t n)
  * void* memmove(void* dest, const void* src, uint32_t n);
  *   Inputs: void* dest = destination of move
  *            const void* src = source of move
- *            uint32_t n = number of byets to move
+ *            uint32_t n = number of bytes to move
  *   Return Value: pointer to dest
  *    Function: move n bytes of src to dest
  */
