@@ -175,12 +175,14 @@ int32_t sys_open(const uint8_t* filename) {
         tasks[cur_task]->file_descs[0].ops = &stdin_ops;
         tasks[cur_task]->file_descs[0].inode = NULL;
         tasks[cur_task]->file_descs[0].flags = FD_STDIN;
+        tasks[cur_task]->file_descs[0].ops->open((int8_t*)filename);
         return 0;
     }
     if (!strncmp((int8_t*)filename, "/dev/stdout", strlen("/dev/stdout"))) {
         tasks[cur_task]->file_descs[1].ops  = &stdout_ops;
         tasks[cur_task]->file_descs[1].inode = NULL;
         tasks[cur_task]->file_descs[1].flags = FD_STDOUT;
+        tasks[cur_task]->file_descs[1].ops->open((int8_t*)filename);
         return 1;
     }
     int i;
@@ -203,6 +205,8 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &kbd_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_KBD;
+
+            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
         }
 
