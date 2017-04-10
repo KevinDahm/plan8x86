@@ -77,7 +77,6 @@ int32_t sys_execute(const uint8_t* command) {
 
     tasks[task_num]->parent = cur_task;
     cur_task = task_num;
-    tasks[cur_task]->status = TASK_RUNNING;
 
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
@@ -91,6 +90,7 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->arg_str = com_str + i;
 
     if ((fd = sys_open(com_str)) == -1) {
+        cur_task = tasks[cur_task]->parent;
         return -1;
     }
 
@@ -106,8 +106,11 @@ int32_t sys_execute(const uint8_t* command) {
 
     if (buf[0] != 0x7F || buf[1] != 0x45 || buf[2] != 0x4C || buf[3] != 0x46) {
         // File is not executable
+        cur_task = tasks[cur_task]->parent;
         return -1;
     }
+
+    tasks[cur_task]->status = TASK_RUNNING;
 
     uint32_t start = ((uint32_t *)buf)[6];
 
