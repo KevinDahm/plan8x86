@@ -246,7 +246,7 @@ int32_t sys_close(int32_t fd) {
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
     uint8_t* arg = tasks[cur_task]->arg_str;
-    uint32_t arg_len = strlen((int8_t*)arg);
+    int32_t arg_len = strlen((int8_t*)arg);
     uint32_t out_len = nbytes < arg_len ? nbytes : arg_len;
     memcpy(buf, arg, out_len);
     return 0;
@@ -257,19 +257,8 @@ int32_t sys_vidmap(uint8_t** screen_start) {
         return -1;
     }
 
-    /* page_table_kb_entry_t* video_entry = */
-    /*     (page_table_kb_entry_t*)(tasks[cur_task]->page_table + ); */
-    /* video_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits) */
-    /* video_entry->avail = 0; */
-    /* video_entry->global = 0; */
-    /* video_entry->pgTblAttIdx = 0; */
-    /* video_entry->dirty = 0; */
-    /* video_entry->accessed = 0; */
-    /* video_entry->cacheDisabled = 0; */
-    /* video_entry->writeThrough = 1;  //1 for fun */
-    /* video_entry->userSupervisor = 0; */
-    /* video_entry->readWrite = 1;     //Write enabled */
-    /* video_entry->present = 1; */
+    *screen_start = (uint8_t *)(TASK_ADDR + MB4);
+
     return 0;
 }
 
