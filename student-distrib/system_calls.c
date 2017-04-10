@@ -194,6 +194,8 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
+
+            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
         }
 

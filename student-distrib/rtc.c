@@ -4,6 +4,7 @@
 #include "i8259.h"
 static void do_rtc_irq(int dev_id);
 static int8_t rtc_flag;
+static uint8_t num_open;
 
 /* void rtc_init(irqaction* rtc_handler)
  * Decription: Initialzes the rtc and it's irqaction struct for use
@@ -114,6 +115,8 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
  * Side effects: None
  */
 int32_t rtc_open(const int8_t* filename){
+    enable_irq(8);
+    num_open++;
     return 0;
 }
 
@@ -124,6 +127,10 @@ int32_t rtc_open(const int8_t* filename){
  * Side effects: None
  */
 int32_t rtc_close(int32_t fd){
+    num_open--;
+    if (!num_open) {
+        disable_irq(8);
+    }
     return 0;
 }
 
