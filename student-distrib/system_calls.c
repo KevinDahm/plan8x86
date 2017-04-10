@@ -62,7 +62,6 @@ int32_t sys_execute(const uint8_t* command) {
     /* r -= 20; */
     /* memcpy(&tasks[cur_task].regs, r, sizeof(regs_t)); */
 
-
     int32_t fd;
     uint8_t task_num;
     for (task_num = 1; task_num < NUM_TASKS; task_num++) {
@@ -81,7 +80,6 @@ int32_t sys_execute(const uint8_t* command) {
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
 
-    // TODO: Parse command
     uint32_t i = 0;
     while(com_str[i] != ' ' && com_str[i] != '\0') i++;
     com_str[i] = '\0';
@@ -259,9 +257,11 @@ int32_t sys_close(int32_t fd) {
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
     uint8_t* arg = tasks[cur_task]->arg_str;
-    int32_t arg_len = strlen((int8_t*)arg);
-    uint32_t out_len = nbytes < arg_len ? nbytes : arg_len;
-    memcpy(buf, arg, out_len);
+    int32_t arg_len = strlen((int8_t*)arg) + 1;
+    if (nbytes < arg_len) {
+        return -1;
+    }
+    memcpy(buf, arg, arg_len);
     return 0;
 }
 
