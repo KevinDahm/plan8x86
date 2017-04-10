@@ -102,10 +102,10 @@ int32_t sys_execute(const uint8_t* command) {
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
 
     sys_read(fd, (void*)buf, stats.size);
+    sys_close(fd);
 
     if (buf[0] != 0x7F || buf[1] != 0x45 || buf[2] != 0x4C || buf[3] != 0x46) {
         // File is not executable
-        sys_close(fd);
         return -1;
     }
 
@@ -139,6 +139,9 @@ int32_t sys_execute(const uint8_t* command) {
 }
 
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
+    if (fd < 0 || fd > FILE_DESCS_LENGTH) {
+        return -1;
+    }
     switch (tasks[cur_task]->file_descs[fd].flags) {
     case FD_DIR:
     case FD_FILE:
@@ -152,6 +155,9 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
 }
 
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
+    if (fd < 0 || fd > FILE_DESCS_LENGTH) {
+        return -1;
+    }
     switch (tasks[cur_task]->file_descs[fd].flags) {
     case FD_RTC:
     case FD_STDOUT:
@@ -162,7 +168,6 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t sys_open(const uint8_t* filename) {
-    // TODO: stdio
     if (!strncmp((int8_t*)filename, "/dev/stdin", strlen("/dev/stdin"))) {
         tasks[cur_task]->file_descs[0].ops = &stdin_ops;
         tasks[cur_task]->file_descs[0].inode = NULL;
@@ -174,10 +179,10 @@ int32_t sys_open(const uint8_t* filename) {
         tasks[cur_task]->file_descs[1].inode = NULL;
         tasks[cur_task]->file_descs[1].flags = FD_STDOUT;
         return 1;
-  }
+    }
     int i;
     for (i = 2; i < FILE_DESCS_LENGTH; i++) {
-        if (tasks[cur_task]->file_descs[i].flags == 0) {
+        if (tasks[cur_task]->file_descs[i].flags == FD_CLEAR) {
             break;
         }
     }
@@ -227,11 +232,16 @@ int32_t sys_open(const uint8_t* filename) {
 }
 
 int32_t sys_close(int32_t fd) {
-    if (fd >= FILE_DESCS_LENGTH || fd < 2)
+    if (fd >= FILE_DESCS_LENGTH || fd < 2) {
         return -1;
+    }
+
+    if (tasks[cur_task]->file_descs[fd].flags == FD_CLEAR) {
+        return -1;
+    }
+
     tasks[cur_task]->file_descs[fd].flags = 0;
     return (*tasks[cur_task]->file_descs[fd].ops->close)(fd);
-    return 0;
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
@@ -243,15 +253,32 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
 }
 
 int32_t sys_vidmap(uint8_t** screen_start) {
+    if ((uint32_t)screen_start < TASK_ADDR || (uint32_t)screen_start >= (TASK_ADDR + MB4)) {
+        return -1;
+    }
+
+    /* page_table_kb_entry_t* video_entry = */
+    /*     (page_table_kb_entry_t*)(tasks[cur_task]->page_table + ); */
+    /* video_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits) */
+    /* video_entry->avail = 0; */
+    /* video_entry->global = 0; */
+    /* video_entry->pgTblAttIdx = 0; */
+    /* video_entry->dirty = 0; */
+    /* video_entry->accessed = 0; */
+    /* video_entry->cacheDisabled = 0; */
+    /* video_entry->writeThrough = 1;  //1 for fun */
+    /* video_entry->userSupervisor = 0; */
+    /* video_entry->readWrite = 1;     //Write enabled */
+    /* video_entry->present = 1; */
     return 0;
 }
 
 int32_t sys_set_handler(int32_t signum, void* handler_address) {
-    return 0;
+    return -1;
 }
 
 int32_t sys_sigreturn(void) {
-    return 0;
+    return -1;
 }
 
 // TODO: processes

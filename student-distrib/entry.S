@@ -66,12 +66,23 @@ common_exception:
 .global system_call
 system_call:
   SAVE_ALL
+  movl $0, %esi
+  cmp %eax, %esi
+  je sys_call_err
+  movl $11, %esi
+  cmp %esi, %eax
+  ja sys_call_err
   pushl %edx
   pushl %ecx
   pushl %ebx
   call *system_calls_jumptable(, %eax, 4)
   addl $12, %esp
   movl %eax, 24(%esp) # Kludge to make sure the return value gets out
+  RESTORE_ALL
+  iret
+
+sys_call_err:
+  movl $-1, 24(%esp)
   RESTORE_ALL
   iret
 
