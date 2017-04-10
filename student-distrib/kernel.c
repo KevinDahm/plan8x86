@@ -13,7 +13,6 @@
 #include "rtc.h"
 #include "kbd.h"
 #include "system_calls.h"
-#include "test.h"
 #include "terminal.h"
 #include "task.h"
 /* Macros. */

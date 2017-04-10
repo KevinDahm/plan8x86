@@ -56,8 +56,8 @@ int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     return 0;
 }
 
-// TODO: Should this have access to file_descs?
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
+    // Pronounced "red"
     int32_t read;
     switch (tasks[cur_task]->file_descs[fd].flags) {
     case FD_FILE:
@@ -93,9 +93,10 @@ int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length) {
-    uint32_t length_to_read = inode->length > length ? length : inode->length;
-    if (offset > inode->length)
+    if (offset > inode->length) {
         return 0;
+    }
+    uint32_t length_to_read = (inode->length - offset) > length ? length : (inode->length - offset);
 
     uint32_t block_nums_index = offset / BLOCK_SIZE;
     uint32_t block_num = inode->block_nums[block_nums_index];
@@ -120,7 +121,7 @@ int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32
             curr_block =  fs_start + ((boot_block->num_inodes + 1) * BLOCK_SIZE) + (block_num * BLOCK_SIZE);
         }
     }
-    buf[length_to_read] = 0;
+
     return length_to_read;
 }
 

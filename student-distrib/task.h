@@ -64,7 +64,8 @@ typedef struct {
     int32_t status;
     file_desc_t file_descs[FILE_DESCS_LENGTH];
     uint32_t *page_directory;
-    uint32_t *page_table;
+    uint32_t *kernel_vid_table;
+    uint32_t *usr_vid_table;
     regs_t regs;
     uint8_t parent;
     uint32_t kernel_esp;

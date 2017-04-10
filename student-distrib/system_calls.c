@@ -99,6 +99,8 @@ int32_t sys_execute(const uint8_t* command) {
 
     switch_page_directory(cur_task);
 
+    memset((void*)TASK_ADDR, 0, MB4);
+
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
 
     sys_read(fd, (void*)buf, stats.size);
@@ -175,12 +177,14 @@ int32_t sys_open(const uint8_t* filename) {
         tasks[cur_task]->file_descs[0].ops = &stdin_ops;
         tasks[cur_task]->file_descs[0].inode = NULL;
         tasks[cur_task]->file_descs[0].flags = FD_STDIN;
+        tasks[cur_task]->file_descs[0].ops->open((int8_t*)filename);
         return 0;
     }
     if (!strncmp((int8_t*)filename, "/dev/stdout", strlen("/dev/stdout"))) {
         tasks[cur_task]->file_descs[1].ops  = &stdout_ops;
         tasks[cur_task]->file_descs[1].inode = NULL;
         tasks[cur_task]->file_descs[1].flags = FD_STDOUT;
+        tasks[cur_task]->file_descs[1].ops->open((int8_t*)filename);
         return 1;
     }
     int i;
@@ -194,6 +198,8 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
+
+            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
         }
 
@@ -201,6 +207,8 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &kbd_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_KBD;
+
+            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
         }
 
@@ -213,11 +221,13 @@ int32_t sys_open(const uint8_t* filename) {
 
             tasks[cur_task]->file_descs[i].ops = &filesys_ops;
             switch (d.type) {
-            case 1:
-                tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename);
+            case FD_DIR:
+                if (-1 == (tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename))) {
+                    return -1;
+                }
                 tasks[cur_task]->file_descs[i].flags = FD_DIR;
                 break;
-            case 2:
+            case FD_FILE:
                 tasks[cur_task]->file_descs[i].file_pos = 0;
                 tasks[cur_task]->file_descs[i].flags = FD_FILE;
                 break;
@@ -243,13 +253,13 @@ int32_t sys_close(int32_t fd) {
         return -1;
     }
 
-    tasks[cur_task]->file_descs[fd].flags = 0;
+    tasks[cur_task]->file_descs[fd].flags = FD_CLEAR;
     return (*tasks[cur_task]->file_descs[fd].ops->close)(fd);
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
     uint8_t* arg = tasks[cur_task]->arg_str;
-    uint32_t arg_len = strlen((int8_t*)arg);
+    int32_t arg_len = strlen((int8_t*)arg);
     uint32_t out_len = nbytes < arg_len ? nbytes : arg_len;
     memcpy(buf, arg, out_len);
     return 0;
@@ -260,19 +270,8 @@ int32_t sys_vidmap(uint8_t** screen_start) {
         return -1;
     }
 
-    /* page_table_kb_entry_t* video_entry = */
-    /*     (page_table_kb_entry_t*)(tasks[cur_task]->page_table + ); */
-    /* video_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits) */
-    /* video_entry->avail = 0; */
-    /* video_entry->global = 0; */
-    /* video_entry->pgTblAttIdx = 0; */
-    /* video_entry->dirty = 0; */
-    /* video_entry->accessed = 0; */
-    /* video_entry->cacheDisabled = 0; */
-    /* video_entry->writeThrough = 1;  //1 for fun */
-    /* video_entry->userSupervisor = 0; */
-    /* video_entry->readWrite = 1;     //Write enabled */
-    /* video_entry->present = 1; */
+    *screen_start = (uint8_t *)(TASK_ADDR + MB4);
+
     return 0;
 }
 

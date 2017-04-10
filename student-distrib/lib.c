@@ -54,6 +54,15 @@ void blue_screen(void) {
 void set_cursor(uint32_t x, uint32_t y){
     screen_x = x;
     screen_y = y;
+
+    unsigned short position=(y*80) + x;
+
+    // cursor LOW port to vga INDEX register
+    outb(0x0F, 0x3D4);
+    outb((unsigned char)(position&0xFF), 0x3D5);
+    // cursor HIGH port to vga INDEX register
+    outb(0x0E, 0x3D4);
+    outb((unsigned char )((position>>8)&0xFF), 0x3D5);
 }
 /*
  * void set_color(col);
@@ -250,6 +259,7 @@ putc(uint8_t c)
         screen_x %= NUM_COLS;
 
     }
+    set_cursor(screen_x, screen_y);
 }
 
 /*
