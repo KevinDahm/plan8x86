@@ -219,11 +219,13 @@ int32_t sys_open(const uint8_t* filename) {
 
             tasks[cur_task]->file_descs[i].ops = &filesys_ops;
             switch (d.type) {
-            case 1:
-                tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename);
+            case FD_DIR:
+                if (-1 == (tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename))) {
+                    return -1;
+                }
                 tasks[cur_task]->file_descs[i].flags = FD_DIR;
                 break;
-            case 2:
+            case FD_FILE:
                 tasks[cur_task]->file_descs[i].file_pos = 0;
                 tasks[cur_task]->file_descs[i].flags = FD_FILE;
                 break;
@@ -249,7 +251,7 @@ int32_t sys_close(int32_t fd) {
         return -1;
     }
 
-    tasks[cur_task]->file_descs[fd].flags = 0;
+    tasks[cur_task]->file_descs[fd].flags = FD_CLEAR;
     return (*tasks[cur_task]->file_descs[fd].ops->close)(fd);
 }
 
