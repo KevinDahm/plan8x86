@@ -280,6 +280,7 @@ removec()
     }
     *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = ' ';
     *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
+    set_cursor(screen_x, screen_y);
 }
 
 /*
