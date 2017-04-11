@@ -104,7 +104,13 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     memset(buf, 0, nbytes);
     while (1) { //Keep reading
         if (kbd_read(0, &k, 2)){ //Read a single key
-            if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
+            if(kbd_equal(k, F1_KEY)){
+                update_screen(0);
+            }else if(kbd_equal(k, F2_KEY)){
+                update_screen(1);
+            }else if(kbd_equal(k, F3_KEY)){
+                update_screen(2);
+            }else if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
                 clear();
                 set_cursor(0, 0);
                 i = 0;
