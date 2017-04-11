@@ -1,2 +1,6 @@
 *.o
 Makefile.dep
+bootimg
+devel
+test
+testgdb
