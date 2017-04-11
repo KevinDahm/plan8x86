@@ -96,6 +96,7 @@ int32_t sys_execute(const uint8_t* command) {
     sys_stat(fd, &stats, sizeof(fstat_t));
 
     switch_page_directory(cur_task);
+    tasks[cur_task]->terminal = 0;
 
     memset((void*)TASK_ADDR, 0, MB4);
 

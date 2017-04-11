@@ -70,6 +70,7 @@ typedef struct {
     uint8_t parent;
     uint32_t kernel_esp;
     uint8_t* arg_str;
+    uint32_t terminal;
 } pcb_t;
 
 pcb_t init_pcb;

@@ -4,7 +4,6 @@
 #include "rtc.h"
 #include "system_calls.h"
 #include "i8259.h"
-
 /* void terminal_init()
  * Decription: Initialzes the terminal operations
  * input: none
@@ -115,8 +114,8 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     memmove(buf+i-1, buf+i, total - i);
                     ((uint8_t*)buf)[total-1] = 0;
                     removec();
-                    x = screen_x;
-                    y = screen_y;
+                    x = get_x();
+                    y = get_y();
                     terminal_write(1, buf+i-1, total-i+1);
                     set_cursor(x, y);
                     i--;
@@ -126,12 +125,12 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
             } else if(kbd_equal(k,DEL_KEY)){
                 if(total-i != 0){
                     i++;
-                    set_cursor(screen_x + 1, screen_y);
+                    set_cursor(get_x() + 1, get_y());
                     memmove(buf+i-1, buf+i, total - i);
                     ((uint8_t*)buf)[total-1] = 0;
                     removec();
-                    x = screen_x;
-                    y = screen_y;
+                    x = get_x();
+                    y = get_y();
                     terminal_write(1, buf+i-1, total-i+1);
                     set_cursor(x, y);
                     i--;
@@ -148,8 +147,8 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
             } else if(kbd_equal(k,TAB_KEY) && total < nbytes){// We write a tab as 4 spaces
                 memmove(buf+i+1, buf+i, total-i);
                 ((uint8_t*)buf)[i] = '\t';
-                x = screen_x;
-                y = screen_y;
+                x = get_x();
+                y = get_y();
                 terminal_write(1, buf+i, total-i+1);
                 set_cursor(x+4, y);
                 i++;
@@ -158,19 +157,19 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
             } else if(kbd_equal(k,LEFT_KEY)){
                 if(total-i != total){
                     i--;
-                    set_cursor(screen_x - 1, screen_y);
+                    set_cursor(get_x() - 1, get_y());
                 }
             }else if(kbd_equal(k,RIGHT_KEY)){
                 if(total-i != 0){
                     i++;
-                    set_cursor(screen_x + 1, screen_y);
+                    set_cursor(get_x() + 1, get_y());
                 }
             }else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
                 //not a special character, just write it to the screen
                 memmove(buf+i+1, buf+i, total - i);
                 ((uint8_t*)buf)[i] = a;
-                x = screen_x;
-                y = screen_y;
+                x = get_x();
+                y = get_y();
                 terminal_write(1, buf+i, total-i+1);
                 set_cursor(x+1, y);
                 i++;

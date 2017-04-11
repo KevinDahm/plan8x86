@@ -3,15 +3,24 @@
  */
 
 #include "lib.h"
+#include "task.h"
 #define VIDEO 0xB8000
 #define NUM_COLS 80
 #define NUM_ROWS 25
 #define ATTRIB 0x7
 #define BLUE 0x1F
+#define TASK_T (tasks[cur_task]->terminal)
+#define ACTIVE (active == TASK_T)
 
-static int color = ATTRIB;
+static char* video_mem = (char*) VIDEO;
+static int32_t screen_x;
+static int32_t screen_y;
 
-static char* video_mem = (char *)VIDEO;
+static int color[3] = {ATTRIB, ATTRIB, ATTRIB};
+static int8_t terminal_video[3][NUM_COLS*NUM_ROWS*2];
+static int32_t term_x[3];
+static int32_t term_y[3];
+static uint32_t active = 0;
 
 /*
  * void clear(void);
@@ -23,10 +32,11 @@ static char* video_mem = (char *)VIDEO;
 void
 clear(void)
 {
+    int8_t* mymem = ACTIVE ? video_mem : terminal_video[TASK_T];
     int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
+        *(uint8_t *)(mymem + (i << 1)) = ' ';
+        *(uint8_t *)(mymem + (i << 1) + 1) = color[TASK_T];
     }
 }
 
@@ -42,7 +52,29 @@ void blue_screen(void) {
     clear();
     set_cursor(0, 0);
 }
+void update_screen(uint32_t terminal){
+    if(terminal > 3 || terminal == active){
+        return;
+    }
+    memcpy(terminal_video[active], video_mem, NUM_ROWS*NUM_COLS*2);
+    term_x[active] = screen_x;
+    term_y[active] = screen_y;
 
+    active = terminal;
+    screen_x = term_x[active];
+    screen_y = term_y[active];
+    memcpy(video_mem, terminal_video[active], NUM_ROWS*NUM_COLS*2);
+}
+
+uint32_t get_active(){
+    return active;
+}
+int32_t get_x(){
+    return ACTIVE ? screen_x : term_x[TASK_T];
+}
+int32_t get_y(){
+    return ACTIVE ? screen_y : term_y[TASK_T];
+}
 /*
  * void set_cursor(uint32_t x, uint32_t y);
  *   Inputs: (x, y)
@@ -51,6 +83,8 @@ void blue_screen(void) {
  */
 
 void set_cursor(uint32_t x, uint32_t y){
+    int32_t* myx = ACTIVE ? &screen_x : &term_x[TASK_T];
+    int32_t* myy = ACTIVE ? &screen_y : &term_y[TASK_T];
     while(x < 0){
         x+=NUM_COLS;
         y--;
@@ -60,17 +94,19 @@ void set_cursor(uint32_t x, uint32_t y){
     }
     if(y < 0 || y >= NUM_ROWS)
         return;
-    screen_x = x;
-    screen_y = y;
+    *myx = x;
+    *myy = y;
 
-    unsigned short position=(y*NUM_COLS) + x;
+    if(ACTIVE){
+        unsigned short position=(y*NUM_COLS) + x;
 
-    // cursor LOW port to vga INDEX register
-    outb(0x0F, 0x3D4);
-    outb((unsigned char)(position&0xFF), 0x3D5);
-    // cursor HIGH port to vga INDEX register
-    outb(0x0E, 0x3D4);
-    outb((unsigned char )((position>>8)&0xFF), 0x3D5);
+        // cursor LOW port to vga INDEX register
+        outb(0x0F, 0x3D4);
+        outb((unsigned char)(position&0xFF), 0x3D5);
+        // cursor HIGH port to vga INDEX register
+        outb(0x0E, 0x3D4);
+        outb((unsigned char )((position>>8)&0xFF), 0x3D5);
+    }
 }
 /*
  * void set_color(col);
@@ -80,16 +116,18 @@ void set_cursor(uint32_t x, uint32_t y){
  */
 
 void set_color(uint8_t col){
-    color = col;
+    color[TASK_T] = col;
 }
 
 void move_up(){
+    int8_t* mymem = ACTIVE ? video_mem : terminal_video[TASK_T];
+    int32_t myy = ACTIVE ? screen_y : term_y[TASK_T];
     int i;
-    screen_y --;
-    memmove((void*)VIDEO, (void*)(VIDEO + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
+    myy--;
+    memmove((void*)mymem, (void*)(mymem + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
     for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
+        *(uint8_t *)(mymem + (i << 1)) = ' ';
+        *(uint8_t *)(mymem + (i << 1) + 1) = color[TASK_T];
     }
 
 }
@@ -251,11 +289,14 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
+    int8_t* mymem = ACTIVE ? video_mem : terminal_video[TASK_T];
+    int32_t* myx = ACTIVE ? &screen_x : &term_x[TASK_T];
+    int32_t* myy = ACTIVE ? &screen_y : &term_y[TASK_T];
     int i;
     if(c == '\n' || c == '\r') {
-        screen_y++;
-        screen_x=0;
-        if(screen_y == NUM_ROWS){
+        (*myy)++;
+        *myx=0;
+        if(*myy == NUM_ROWS){
             move_up();
         }
     } else if(c == '\t'){
@@ -263,16 +304,16 @@ putc(uint8_t c)
             putc(' ');
         }
     }else {
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
-        screen_x++;
-        screen_y = (screen_y + (screen_x / NUM_COLS));
-        if(screen_y == NUM_ROWS)
+        *(uint8_t *)(mymem + ((NUM_COLS*(*myy) + *myx) << 1)) = c;
+        *(uint8_t *)(mymem + ((NUM_COLS*(*myy) + *myx) << 1) + 1) = color[TASK_T];
+        (*myx)++;
+        *myy = (*myy + (*myx / NUM_COLS));
+        if(*myy == NUM_ROWS)
             move_up();
-        screen_x %= NUM_COLS;
+        *myx %= NUM_COLS;
 
     }
-    set_cursor(screen_x, screen_y);
+    set_cursor(*myx, *myy);
 }
 
 /*
@@ -284,15 +325,18 @@ putc(uint8_t c)
 void
 removec()
 {
-    if(screen_x == 0 && screen_y == 0)
+    int8_t* mymem = ACTIVE ? video_mem : terminal_video[TASK_T];
+    int32_t* myx = ACTIVE ? &screen_x : &term_x[TASK_T];
+    int32_t* myy = ACTIVE ? &screen_y : &term_y[TASK_T];
+    if(*myx == 0 && *myy == 0)
         return;
-    screen_x--;
-    if(screen_x == -1) {
-        screen_y--;
-        screen_x += NUM_COLS;
+    (*myx)--;
+    if(*myx == -1) {
+        (*myy)--;
+        *myx += NUM_COLS;
     }
-    *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = ' ';
-    *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
+    *(uint8_t *)(mymem + ((NUM_COLS*(*myy) + *myx) << 1)) = ' ';
+    *(uint8_t *)(mymem + ((NUM_COLS*(*myy) + *myx) << 1) + 1) = color[TASK_T];
 }
 
 /*
