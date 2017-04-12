@@ -24,8 +24,12 @@ void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv) {
     vid_table->readWrite = 1;    //Write enabled
     vid_table->present = 1;
 
-    page_table_kb_entry_t* vid_entry =
-        (page_table_kb_entry_t*)(table + (VIDEO >> 12));
+    page_table_kb_entry_t* vid_entry;
+    if (priv == 0) {
+        vid_entry = (page_table_kb_entry_t*)(table + (VIDEO >> 12));
+    } else {
+        vid_entry = (page_table_kb_entry_t*)(table);
+    }
     vid_entry->addr = VIDEO >> 12;    //Lose lower 12 bits (keep 20 high bits)
     vid_entry->avail = 0;
     vid_entry->global = 0;
