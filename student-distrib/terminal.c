@@ -4,7 +4,6 @@
 #include "rtc.h"
 #include "system_calls.h"
 #include "i8259.h"
-
 /* void terminal_init()
  * Decription: Initialzes the terminal operations
  * Input: none
@@ -98,46 +97,92 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes) {
 int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     kbd_t k;
     int32_t i = 0;
+    int32_t total = 0;
     int8_t a;
+    int32_t x, y;
     nbytes = nbytes > 128 ? 128 : nbytes; //Cap line size at 128
-    while (i < nbytes) { //Keep reading until nbytes
+    memset(buf, 0, nbytes);
+    while (1) { //Keep reading
         if (kbd_read(0, &k, 2)){ //Read a single key
-            if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
+            if(kbd_equal(k, F1_KEY)){
+                update_screen(0);
+            }else if(kbd_equal(k, F2_KEY)){
+                update_screen(1);
+            }else if(kbd_equal(k, F3_KEY)){
+                update_screen(2);
+            }else if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
                 clear();
                 set_cursor(0, 0);
                 i = 0;
+                total = 0;
             } else if(kbd_equal(k, BKSP_KEY)) { //Delete the previous character
                 if(i > 0) {
-                    if(((uint8_t*)buf)[--i]=='\t') {
-                        removec();
-                        removec();
-                        removec();
-                    }
+                    memmove(buf+i-1, buf+i, total - i);
+                    ((uint8_t*)buf)[total-1] = 0;
                     removec();
+                    x = get_x();
+                    y = get_y();
+                    terminal_write(1, buf+i-1, total-i+1);
+                    set_cursor(x, y);
+                    i--;
+                    total--;
+
                 }
-            } else if(kbd_equal(k,ESC_KEY)){
-                /* TODO: ESCAPE FUNCTIONALITY */
+            } else if(kbd_equal(k,DEL_KEY)){
+                if(total-i != 0){
+                    i++;
+                    set_cursor(get_x() + 1, get_y());
+                    memmove(buf+i-1, buf+i, total - i);
+                    ((uint8_t*)buf)[total-1] = 0;
+                    removec();
+                    x = get_x();
+                    y = get_y();
+                    terminal_write(1, buf+i-1, total-i+1);
+                    set_cursor(x, y);
+                    i--;
+                    total--;
+                }
             } else if(kbd_equal(k, ENTER)) { //Write a newline and return
-                a = '\n';
-                ((uint8_t*)buf)[i] = a;
-                i++;
-                putc(a);
-                return i;
-            } else if(kbd_equal(k,TAB_KEY)){// We write a tab as 4 spaces
-                a = ' ';
+                if(total != nbytes){
+                    a = '\n';
+                    ((uint8_t*)buf)[total] = a;
+                    total++;
+                    putc(a);
+                }
+                return total;
+            } else if(kbd_equal(k,TAB_KEY) && total < nbytes){// We write a tab as 4 spaces
+                memmove(buf+i+1, buf+i, total-i);
                 ((uint8_t*)buf)[i] = '\t';
+                x = get_x();
+                y = get_y();
+                terminal_write(1, buf+i, total-i+1);
+                set_cursor(x+4, y);
                 i++;
-                putc(a);
-                putc(a);
-                putc(a);
-                putc(a);
-            } else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0') {
+                total++;
+
+            } else if(kbd_equal(k,LEFT_KEY)){
+                if(total-i != total){
+                    i--;
+                    set_cursor(get_x() - 1, get_y());
+                }
+            }else if(kbd_equal(k,RIGHT_KEY)){
+                if(total-i != 0){
+                    i++;
+                    set_cursor(get_x() + 1, get_y());
+                }
+            }else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
                 //not a special character, just write it to the screen
+                memmove(buf+i+1, buf+i, total - i);
                 ((uint8_t*)buf)[i] = a;
+                x = get_x();
+                y = get_y();
+                terminal_write(1, buf+i, total-i+1);
+                set_cursor(x+1, y);
                 i++;
-                putc(a);
+                total++;
+
             }
         }
     }
-    return i;
+    return total;
 }

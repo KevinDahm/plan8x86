@@ -12,8 +12,8 @@
 #include "rtc.h"
 #include "system_calls.h"
 #include "terminal.h"
-#include "x86_desc.h"
-
+#include "task.h"
+#include "schedule.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -21,6 +21,7 @@
 // NOTE: These cannot be declared on the stack because the kernel stack is destroyed when user processes start
 irqaction keyboard_handler;
 irqaction rtc_handler;
+irqaction pit_handler;
 
 
 void entry (unsigned long magic, unsigned long addr) {
@@ -135,7 +136,9 @@ void entry (unsigned long magic, unsigned long addr) {
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
-    // Load the idt
+    pit_init(&pit_handler);
+    set_intr_gate(0x20, irq_0x0);
+
     lidt(idt_desc_ptr);
 
     clear();
@@ -146,5 +149,8 @@ void entry (unsigned long magic, unsigned long addr) {
     terminal_init();
     system_calls_init();
 
-    sys_execute((uint8_t*)"shell");
+    /* Execute the first program (`shell') ... */
+    enable_irq(0);
+    /* sys_execute((uint8_t*)"shell"); */
+    while(1){}
 }

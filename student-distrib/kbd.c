@@ -275,6 +275,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
     uint32_t i = 0;
     while(i < nbytes){
+        /* if(get_active() == tasks[cur_task]->terminal){ */
         if(read_index != write_index){
             *((kbd_t*)buf) = kbd_buffer[read_index];
             read_index = (read_index + 1)%BUFFER_SIZE;
@@ -283,6 +284,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
         }else{
             return i;
         }
+        /* } */
         // Don't waste CPU cycles. Nothing's going to move until a kbd interrupt happens
         asm volatile("hlt;");
     }
