@@ -15,6 +15,7 @@
 #include "system_calls.h"
 #include "terminal.h"
 #include "task.h"
+#include "schedule.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -22,6 +23,7 @@
 // NOTE: These cannot be declared on the stack because the kernel stack is destroyed when user processes start
 irqaction keyboard_handler;
 irqaction rtc_handler;
+irqaction pit_handler;
 
 /* Check if MAGIC is valid and print the Multiboot information structure
    pointed by ADDR. */
@@ -202,6 +204,9 @@ entry (unsigned long magic, unsigned long addr)
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
+    pit_init(&pit_handler);
+    set_intr_gate(0x20, irq_0x0);
+
     lidt(idt_desc_ptr);
 
     clear();
@@ -214,5 +219,7 @@ entry (unsigned long magic, unsigned long addr)
     system_calls_init();
 
     /* Execute the first program (`shell') ... */
-    sys_execute((uint8_t*)"shell");
+    enable_irq(0);
+    /* sys_execute((uint8_t*)"shell"); */
+    while(1){}
 }

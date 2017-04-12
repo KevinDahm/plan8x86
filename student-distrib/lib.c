@@ -121,9 +121,9 @@ void set_color(uint8_t col){
 
 void move_up(){
     int8_t* mymem = ACTIVE ? video_mem : terminal_video[TASK_T];
-    int32_t myy = ACTIVE ? screen_y : term_y[TASK_T];
+    int32_t* myy = ACTIVE ? &screen_y : &term_y[TASK_T];
     int i;
-    myy--;
+    (*myy)--;
     memmove((void*)mymem, (void*)(mymem + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
     for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(mymem + (i << 1)) = ' ';
