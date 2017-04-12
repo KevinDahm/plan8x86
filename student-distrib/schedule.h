@@ -8,6 +8,8 @@
 #define TASK_T (tasks[cur_task]->terminal)
 #define IS_ACTIVE (active == TASK_T)
 
+extern uint32_t interupt_preempt;
+
 extern uint32_t term_process[NUM_TERM];
 
 extern uint32_t active;

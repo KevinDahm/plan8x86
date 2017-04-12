@@ -230,10 +230,21 @@ void _kbd_do_irq(int dev_id) {
     }
     // If buffer isn't full and a key is pressed
     if(!buffer_full && kbd_state.state & 0xFF) {
+
+        int f;
+        for (f = 0; f < NUM_TERM; f++) {
+            if (kbd_equal(kbd_state, f + F1_KEY)) {
+                update_screen(f);
+                break;
+            }
+        }
+
         // Write key to buffer
         kbd_buffer[active][write_index[active]] = kbd_state;
         // Increment write_index
         write_index[active] = (write_index[active] + 1)%BUFFER_SIZE;
+
+        interupt_preempt = 1;
 
         // If buffer full, disable writing
         if (write_index[active] == read_index[active])

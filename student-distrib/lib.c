@@ -15,10 +15,10 @@ static char* video_mem = (char*) VIDEO;
 static int32_t screen_x;
 static int32_t screen_y;
 
-static int color[3] = {ATTRIB, ATTRIB, ATTRIB};
-static int8_t terminal_video[3][NUM_COLS*NUM_ROWS*2];
-static int32_t term_x[3];
-static int32_t term_y[3];
+static int color[NUM_TERM] = {ATTRIB, ATTRIB, ATTRIB};
+static int8_t terminal_video[NUM_TERM][NUM_COLS*NUM_ROWS*2];
+static int32_t term_x[NUM_TERM];
+static int32_t term_y[NUM_TERM];
 
 
 /*
@@ -52,7 +52,7 @@ void blue_screen(void) {
 }
 
 void update_screen(uint32_t terminal){
-    if(terminal > 3 || terminal == active){
+    if(terminal >= NUM_TERM || terminal == active){
         return;
     }
     memcpy(terminal_video[active], video_mem, NUM_ROWS*NUM_COLS*2);
@@ -63,6 +63,7 @@ void update_screen(uint32_t terminal){
     screen_x = term_x[active];
     screen_y = term_y[active];
     memcpy(video_mem, terminal_video[active], NUM_ROWS*NUM_COLS*2);
+    set_cursor(screen_x, screen_y);
 }
 
 

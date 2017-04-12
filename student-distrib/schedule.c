@@ -6,11 +6,15 @@
 #include "lib.h"
 #include "x86_desc.h"
 #include "i8259.h"
+
 static int act_term = -1;
 
 uint32_t term_process[NUM_TERM] = {0, 0, 0};
 
 uint32_t active = 0;
+
+// TODO: Get rid of this, this is hacky
+uint32_t interupt_preempt = 0;
 
 void schedule(int dev_id){
     uint32_t ebp;
@@ -21,7 +25,12 @@ void schedule(int dev_id){
     tasks[cur_task]->regs.ebp = ebp;
 
     //   printf(" %x ", ebp);
-    act_term = (act_term+1)%NUM_TERM;
+    if (interupt_preempt) {
+        act_term = active;
+        interupt_preempt = 0;
+    } else {
+        act_term = (act_term+1)%NUM_TERM;
+    }
     cur_task = term_process[act_term];
     switch_page_directory(cur_task);
     if(cur_task == 0){
@@ -50,6 +59,11 @@ void pit_init(irqaction* pit_handler){
     pit_handler->dev_id = 0x20;
     pit_handler->next = NULL;
     irq_desc[0x0] = pit_handler;
+
+    // 00110100b - Magic
+    outb(0x34, 0x43);
+    outb(0, 0x40);
+    outb(0, 0x40);
 }
 
 
