@@ -14,6 +14,7 @@
 #include "terminal.h"
 #include "task.h"
 #include "schedule.h"
+#include "x86_desc.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
