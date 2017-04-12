@@ -1,6 +1,7 @@
 #include "kbd.h"
 #include "lib.h"
 #include "i8259.h"
+#include "schedule.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
 #define BUFFER_SIZE 128
@@ -8,11 +9,11 @@ static uint8_t e0_waiting = 0;
 static uint8_t kbd_ready = 0;
 static uint8_t caps_held = 0;
 
-static uint32_t write_index = 0;
-static uint32_t read_index = 0;
+static uint32_t write_index[NUM_TERM];
+static uint32_t read_index[NUM_TERM];
 static uint8_t buffer_full = 0;
 
-static kbd_t kbd_buffer[BUFFER_SIZE];
+static kbd_t kbd_buffer[NUM_TERM][BUFFER_SIZE];
 
 // Current kbd state
 kbd_t kbd_state;
@@ -230,12 +231,12 @@ void _kbd_do_irq(int dev_id) {
     // If buffer isn't full and a key is pressed
     if(!buffer_full && kbd_state.state & 0xFF) {
         // Write key to buffer
-        kbd_buffer[write_index] = kbd_state;
+        kbd_buffer[active][write_index[active]] = kbd_state;
         // Increment write_index
-        write_index = (write_index + 1)%BUFFER_SIZE;
+        write_index[active] = (write_index[active] + 1)%BUFFER_SIZE;
 
         // If buffer full, disable writing
-        if (write_index == read_index)
+        if (write_index[active] == read_index[active])
             buffer_full = 1;
     }
 
@@ -257,6 +258,12 @@ void kbd_init(irqaction* keyboard_handler) {
 
     irq_desc[0x1] = keyboard_handler;
     enable_irq(1);
+
+    int i;
+    for (i = 0; i < NUM_TERM; i++) {
+        write_index[i] = 0;
+        read_index[i] = 0;
+    }
 }
 
 int32_t kbd_open(const int8_t* filename) {
@@ -273,12 +280,12 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
-    uint32_t i = 0;
+    int32_t i = 0;
     while(i < nbytes){
         /* if(get_active() == tasks[cur_task]->terminal){ */
-        if(read_index != write_index){
-            *((kbd_t*)buf) = kbd_buffer[read_index];
-            read_index = (read_index + 1)%BUFFER_SIZE;
+        if(read_index[TASK_T] != write_index[TASK_T]){
+            *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
+            read_index[TASK_T] = (read_index[TASK_T] + 1)%BUFFER_SIZE;
             i += sizeof(kbd_t);
             buffer_full = 0;
         }else{

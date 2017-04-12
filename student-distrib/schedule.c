@@ -10,6 +10,8 @@ static int act_term = -1;
 
 uint32_t term_process[NUM_TERM] = {0, 0, 0};
 
+uint32_t active = 0;
+
 void schedule(int dev_id){
     uint32_t ebp;
     asm volatile(" \n\
@@ -48,7 +50,6 @@ void pit_init(irqaction* pit_handler){
     pit_handler->dev_id = 0x20;
     pit_handler->next = NULL;
     irq_desc[0x0] = pit_handler;
-
-
-
 }
+
+
