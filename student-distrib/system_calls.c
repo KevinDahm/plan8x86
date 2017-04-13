@@ -23,10 +23,15 @@ int32_t sys_halt(uint32_t status) {
     }
 
     tasks[cur_task]->status = TASK_EMPTY;
+    uint32_t term = tasks[cur_task]->terminal;
 
     cur_task = tasks[cur_task]->parent;
 
     switch_page_directory(cur_task);
+    if(cur_task == 0){
+        tasks[0]->terminal = term;
+        sys_execute((uint8_t*)"shell");
+    }
 
     uint32_t ebp = tasks[cur_task]->regs.ebp;
     term_process[tasks[cur_task]->terminal] = cur_task;
