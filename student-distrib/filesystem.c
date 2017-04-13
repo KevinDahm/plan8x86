@@ -7,14 +7,6 @@ static void* fs_end;
 
 static boot_block_t* boot_block;
 
-/* file_system_init
- * Description: Initializes the filesystem operations
- * Input:   start - pointer to the start of the filesystem
- *          end - pointer to the end of the filesystem
- * Output: none
- * Side Effects: initializes function pointers for system calls
- *               defines the range of the filesystem
- */
 void file_system_init(void* start, void* end) {
     fs_start = start;
     fs_end = end;
@@ -27,11 +19,6 @@ void file_system_init(void* start, void* end) {
     filesys_ops.stat = filesys_stat;
 }
 
-/* filesys_open
- * Description: Opens a file
- * Input:   filename - The name of the file to be opened
- * Return:  The inode for the file specified OR NULL for dir OR -1 for error
- */
 int32_t filesys_open(const int8_t* filename) {
     dentry_t dentry;
     // TODO: If file does not already exist create it? EC?
@@ -48,20 +35,9 @@ int32_t filesys_open(const int8_t* filename) {
     } else return -1;
 }
 
-/* filesys_close
- * Description: Closes a file, currently does nothing
- * Input:   fd - File descriptor for file to be closed
- * Return:  0 for success
- */
 int32_t filesys_close(int32_t fd) {
     return 0;
 }
-
-/* filesys_stat
- * Description: Gets statistics for the specified file
- * Input:   filename - The name of the file to be opened
- * Return:  The inode for the file specified OR NULL for dir OR -1 for error
- */
 int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     dentry_t e;
     switch(tasks[cur_task]->file_descs[fd].flags) {

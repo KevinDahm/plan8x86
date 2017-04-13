@@ -6,8 +6,6 @@
 #define _LIB_H
 
 #include "types.h"
-
-
 extern int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
 void removec();
@@ -19,10 +17,6 @@ void clear(void);
 void blue_screen(void);
 void set_cursor(uint32_t x, uint32_t y);
 void set_color(uint8_t col);
-void update_screen(uint32_t terminal);
-uint32_t get_active();
-int32_t get_x();
-int32_t get_y();
 
 void* memset(void* s, int32_t c, uint32_t n);
 void* memset_word(void* s, int32_t c, uint32_t n);

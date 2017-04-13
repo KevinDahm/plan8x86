@@ -7,7 +7,6 @@
 #include "page.h"
 #include "x86_desc.h"
 #include "task.h"
-#include "schedule.h"
 
 #define st(a) #a
 #define str(a) st(a)
@@ -15,7 +14,6 @@
 uint32_t halt_status;
 
 int32_t sys_halt(uint32_t status) {
-    tasks[cur_task]->kernel_esp = (KERNEL + MB4) - (cur_task * PER_TASK_KERNEL_STACK_SIZE);
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {
@@ -24,19 +22,17 @@ int32_t sys_halt(uint32_t status) {
     }
 
     tasks[cur_task]->status = TASK_EMPTY;
-    uint32_t term = tasks[cur_task]->terminal;
 
     cur_task = tasks[cur_task]->parent;
-    tasks[cur_task]->status = TASK_RUNNING;
 
     switch_page_directory(cur_task);
-    if(cur_task == 0){
-        tasks[0]->terminal = term;
+
+    if (cur_task == 0) {
         sys_execute((uint8_t*)"shell");
     }
 
     uint32_t ebp = tasks[cur_task]->regs.ebp;
-    term_process[tasks[cur_task]->terminal] = cur_task;
+
     // Save the return value before moving the stack.
     // halt_status has to be static memory, it cannot be on the stack.
     halt_status = status;
@@ -62,8 +58,6 @@ int32_t sys_execute(const uint8_t* command) {
                  : "=r"(ebp)
                  :);
     tasks[cur_task]->regs.ebp = ebp;
-    tasks[cur_task]->kernel_esp = ebp - 4;
-    /* printf(" %xe %d", ebp, cur_task); */
     /* tasks[cur_task].regs.esp = ebp + 4; */
     /* r -= 20; */
     /* memcpy(&tasks[cur_task].regs, r, sizeof(regs_t)); */
@@ -102,8 +96,7 @@ int32_t sys_execute(const uint8_t* command) {
     sys_stat(fd, &stats, sizeof(fstat_t));
 
     switch_page_directory(cur_task);
-    tasks[cur_task]->terminal = tasks[tasks[cur_task]->parent]->terminal;
-    term_process[tasks[cur_task]->terminal] = cur_task;
+
     memset((void*)TASK_ADDR, 0, MB4);
 
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
@@ -118,7 +111,6 @@ int32_t sys_execute(const uint8_t* command) {
     }
 
     tasks[cur_task]->status = TASK_RUNNING;
-    tasks[tasks[cur_task]->parent]->status = TASK_SLEEPING;
 
     uint32_t start = ((uint32_t *)buf)[6];
 

@@ -4,7 +4,6 @@
 #include "types.h"
 #include "filesystem.h"
 #include "task.h"
-#include "idt.h"
 
 #define RTC_PORT 0x70
 #define CHOOSE_RTC_A 0x8A
@@ -16,7 +15,7 @@
 #define RTC_CMD_B 0x40
 
 /*Call to initialize RTC*/
-extern void rtc_init(irqaction* rtc_handler);
+extern void rtc_init();
 //system call to open rtc
 extern int32_t rtc_open(const int8_t* filename);
 //system call to close rtc
