@@ -24,6 +24,8 @@ irqaction keyboard_handler;
 irqaction rtc_handler;
 irqaction pit_handler;
 
+int8_t shell_str[] = "shell";
+
 
 void entry (unsigned long magic, unsigned long addr) {
     multiboot_info_t *mbi;
@@ -152,6 +154,22 @@ void entry (unsigned long magic, unsigned long addr) {
 
     /* Execute the first program (`shell') ... */
     enable_irq(0);
-    /* sys_execute((uint8_t*)"shell"); */
-    while(1){}
+
+    tasks[0]->terminal = 0;
+    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
+        :
+        : "b"(shell_str));
+    tasks[0]->terminal = 1;
+    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
+                 :
+                 : "b"(shell_str));
+    tasks[0]->terminal = 2;
+    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
+                 :
+                 : "b"(shell_str));
+    tasks[0]->terminal = 0;
+
+    printf("INIT INIT INIT\n");
+
+    asm volatile (".1: hlt; jmp .1;");
 }

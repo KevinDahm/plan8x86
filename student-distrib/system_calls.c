@@ -15,6 +15,7 @@
 uint32_t halt_status;
 
 int32_t sys_halt(uint32_t status) {
+    tasks[cur_task]->kernel_esp = (KERNEL + MB4) - (cur_task * PER_TASK_KERNEL_STACK_SIZE);
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {
@@ -26,6 +27,7 @@ int32_t sys_halt(uint32_t status) {
     uint32_t term = tasks[cur_task]->terminal;
 
     cur_task = tasks[cur_task]->parent;
+    tasks[cur_task]->status = TASK_RUNNING;
 
     switch_page_directory(cur_task);
     if(cur_task == 0){
@@ -60,6 +62,7 @@ int32_t sys_execute(const uint8_t* command) {
                  : "=r"(ebp)
                  :);
     tasks[cur_task]->regs.ebp = ebp;
+    tasks[cur_task]->kernel_esp = ebp - 4;
     /* printf(" %xe %d", ebp, cur_task); */
     /* tasks[cur_task].regs.esp = ebp + 4; */
     /* r -= 20; */
@@ -115,6 +118,7 @@ int32_t sys_execute(const uint8_t* command) {
     }
 
     tasks[cur_task]->status = TASK_RUNNING;
+    tasks[tasks[cur_task]->parent]->status = TASK_SLEEPING;
 
     uint32_t start = ((uint32_t *)buf)[6];
 

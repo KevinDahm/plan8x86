@@ -98,7 +98,9 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
  * Side Effects: Fills the tasks array.
  */
 void create_init() {
-    tasks[0] = &init_pcb;
+    tasks[0] = (pcb_t *)((KERNEL + MB4) - (PER_TASK_KERNEL_STACK_SIZE));
+    memset(tasks[0], 0, sizeof(pcb_t));
+    tasks[0]->kernel_esp = (KERNEL + MB4);
     tasks[0]->status = TASK_RUNNING;
     tasks[0]->page_directory = page_directory_tables[0];
     tasks[0]->kernel_vid_table = page_tables[0][0];
@@ -112,9 +114,9 @@ void create_init() {
 
     uint32_t task;
     for (task = 1; task < NUM_TASKS; task++) {
-        tasks[task] = (pcb_t *)((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE));
+        tasks[task] = (pcb_t *)((KERNEL + MB4) - ((task + 1) * PER_TASK_KERNEL_STACK_SIZE));
         memset(tasks[task], 0, sizeof(pcb_t));
-        tasks[task]->kernel_esp = (KERNEL + MB4) - ((task - 1) * PER_TASK_KERNEL_STACK_SIZE);
+        tasks[task]->kernel_esp = (KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE);
         tasks[task]->status = TASK_EMPTY;
 
         tasks[task]->page_directory = page_directory_tables[task];

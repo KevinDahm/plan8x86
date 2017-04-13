@@ -18,6 +18,8 @@ static kbd_t kbd_buffer[NUM_TERM][BUFFER_SIZE];
 // Current kbd state
 kbd_t kbd_state;
 
+uint8_t kbd_sleeping_tasks[NUM_TASKS];
+
 #define DVORAK 0
 
 #if DVORAK
@@ -246,6 +248,8 @@ void _kbd_do_irq(int dev_id) {
 
         interupt_preempt = 1;
 
+        tasks[term_process[active]]->status = TASK_RUNNING;
+
         // If buffer full, disable writing
         if (write_index[active] == read_index[active])
             buffer_full = 1;
@@ -293,16 +297,16 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
     int32_t i = 0;
     while(i < nbytes){
-        /* if(get_active() == tasks[cur_task]->terminal){ */
         if(read_index[TASK_T] != write_index[TASK_T]){
             *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
             read_index[TASK_T] = (read_index[TASK_T] + 1)%BUFFER_SIZE;
             i += sizeof(kbd_t);
             buffer_full = 0;
-        }else{
-            return i;
+        } else {
+            tasks[cur_task]->status = TASK_SLEEPING;
+            kbd_sleeping_tasks[cur_task] = 1;
         }
-        /* } */
+
         // Don't waste CPU cycles. Nothing's going to move until a kbd interrupt happens
         asm volatile("hlt;");
     }

@@ -7,14 +7,14 @@
 #include "x86_desc.h"
 #include "i8259.h"
 
-static int act_term = -1;
-
 uint32_t term_process[NUM_TERM] = {0, 0, 0};
 
 uint32_t active = 0;
 
 // TODO: Get rid of this, this is hacky
 uint32_t interupt_preempt = 0;
+
+static int cur_p = 0;
 
 void schedule(int dev_id){
     uint32_t ebp;
@@ -23,38 +23,43 @@ void schedule(int dev_id){
                  : "=r"(ebp)
                  :);
     tasks[cur_task]->regs.ebp = ebp;
+    tasks[cur_task]->kernel_esp = ebp - 4;
 
-    //   printf(" %x ", ebp);
     if (interupt_preempt) {
-        act_term = active;
+        cur_task = term_process[active];
         interupt_preempt = 0;
     } else {
-        act_term = (act_term+1)%NUM_TERM;
-    }
-    cur_task = term_process[act_term];
-    switch_page_directory(cur_task);
-    if(cur_task == 0){
-        term_process[act_term] = act_term + 1;
-        //       printf("if%d", act_term);
-        tasks[0]->terminal = act_term;
-        send_eoi(0);
-        sys_execute((uint8_t*)"shell");
+
+        cur_task = 0;
+
+        int i;
+        for (i = 0; i < (NUM_TASKS - 1); i++) {
+            uint8_t task_i = ((cur_p + i) % (NUM_TASKS - 1)) + 1;
+            if (tasks[task_i]->status == TASK_RUNNING) {
+                cur_task = task_i;
+                cur_p = task_i;
+                break;
+            }
+        }
     }
 
-    //  printf("Hey%d", cur_task);
+    switch_page_directory(cur_task);
+
     ebp = tasks[cur_task]->regs.ebp;
 
-
     asm volatile(" \n\
-movl %0, %%ebp \n"
+    movl %0, %%ebp \n"
                  :
                  : "r"(ebp));
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
+    send_eoi(0);
+    // GCC compiles this function with no leave call. Thus the ebp becomes useless.
+    asm volatile("leave; ret;" : :);
 }
+
 void pit_init(irqaction* pit_handler){
-//setup the handler, on line 8
     pit_handler->handle = schedule;
     pit_handler->dev_id = 0x20;
     pit_handler->next = NULL;
