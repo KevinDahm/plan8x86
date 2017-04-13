@@ -14,5 +14,4 @@ extern int32_t stdout_read(int32_t fd, void* buf, int32_t nbytes);
 file_ops_t stdin_ops;
 file_ops_t stdout_ops;
 
-
 #endif // TERMINAL_H

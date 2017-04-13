@@ -1,6 +1,6 @@
 #include "rtc.h"
-#include "idt.h"
 #include "lib.h"
+#include "idt.h"
 #include "i8259.h"
 static void do_rtc_irq(int dev_id);
 static int8_t rtc_flag;

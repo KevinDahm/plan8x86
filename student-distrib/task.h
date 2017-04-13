@@ -6,7 +6,7 @@
 void create_init();
 
 #define FILE_DESCS_LENGTH 8
-#define NUM_TASKS 3
+#define NUM_TASKS 10
 
 typedef struct file_ops {
     int32_t (*open)(const int8_t*);
@@ -36,6 +36,7 @@ typedef struct file_desc {
 
 #define TASK_EMPTY 0
 #define TASK_RUNNING 1
+#define TASK_SLEEPING 2
 
 /* typedef struct { */
 /*     uint32_t xss; */
@@ -70,9 +71,8 @@ typedef struct {
     uint8_t parent;
     uint32_t kernel_esp;
     uint8_t* arg_str;
+    uint32_t terminal;
 } pcb_t;
-
-pcb_t init_pcb;
 
 pcb_t *tasks[NUM_TASKS];
 
