@@ -84,7 +84,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
  */
 int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     if(nbytes != 4){
-        return -1;
+        return 0;
     }
     //disable interrupts while writing to the rtc
     uint32_t flags;
