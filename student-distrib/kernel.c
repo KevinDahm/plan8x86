@@ -169,7 +169,5 @@ void entry (unsigned long magic, unsigned long addr) {
                  : "b"(shell_str));
     tasks[0]->terminal = 0;
 
-    printf("INIT INIT INIT\n");
-
     asm volatile (".1: hlt; jmp .1;");
 }

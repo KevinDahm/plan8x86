@@ -76,6 +76,6 @@ typedef struct {
 
 pcb_t *tasks[NUM_TASKS];
 
-uint8_t cur_task;
+extern uint8_t cur_task;
 
 #endif

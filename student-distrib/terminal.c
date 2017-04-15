@@ -4,6 +4,7 @@
 #include "rtc.h"
 #include "system_calls.h"
 #include "i8259.h"
+#include "page.h"
 /* void terminal_init()
  * Decription: Initialzes the terminal operations
  * Input: none

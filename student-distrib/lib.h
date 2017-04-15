@@ -6,7 +6,7 @@
 #define _LIB_H
 
 #include "types.h"
-
+#include "schedule.h"
 
 extern int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
@@ -21,8 +21,8 @@ void set_cursor(uint32_t x, uint32_t y);
 void set_color(uint8_t col);
 void update_screen(uint32_t terminal);
 uint32_t get_active();
-int32_t get_x();
-int32_t get_y();
+uint32_t get_x();
+uint32_t get_y();
 
 void* memset(void* s, int32_t c, uint32_t n);
 void* memset_word(void* s, int32_t c, uint32_t n);
@@ -38,6 +38,8 @@ int32_t bad_userspace_addr(const void* addr, int32_t len);
 int32_t safe_strncpy(int8_t* dest, const int8_t* src, int32_t n);
 
 void test_interrupts();
+
+int8_t terminal_video[NUM_TERM][0x1000] __attribute__((aligned (0x1000)));
 
 /* Port read functions */
 /* Inb reads a byte and returns its value as a zero-extended 32-bit

@@ -2,6 +2,8 @@
 #include "lib.h"
 #include "page.h"
 
+uint8_t cur_task = 0;
+
 /* setup_kernel_mem
  * Description: Sets up a 4KB page mapping to video memory
  * Input:  dir - A pointer to a page directory entry to fill out

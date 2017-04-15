@@ -101,9 +101,18 @@ int32_t sys_execute(const uint8_t* command) {
     fstat_t stats;
     sys_stat(fd, &stats, sizeof(fstat_t));
 
-    switch_page_directory(cur_task);
     tasks[cur_task]->terminal = tasks[tasks[cur_task]->parent]->terminal;
     term_process[tasks[cur_task]->terminal] = cur_task;
+    if (tasks[cur_task]->terminal == active) {
+        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
+        usr_vid_table->addr = VIDEO >> 12;
+    } else {
+        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
+        usr_vid_table->addr = (uint32_t)terminal_video[tasks[cur_task]->terminal] >> 12;
+    }
+
+    switch_page_directory(cur_task);
+
     memset((void*)TASK_ADDR, 0, MB4);
 
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
@@ -117,6 +126,8 @@ int32_t sys_execute(const uint8_t* command) {
         return -1;
     }
 
+    cli();
+
     tasks[cur_task]->status = TASK_RUNNING;
     tasks[tasks[cur_task]->parent]->status = TASK_SLEEPING;
 
@@ -127,7 +138,6 @@ int32_t sys_execute(const uint8_t* command) {
     uint32_t user_stack_addr = TASK_ADDR + MB4;
 
     asm volatile("                             \n\
-    cli                                        \n\
     movw $" str(USER_DS) ", %%ax               \n\
     movw %%ax, %%ds                            \n\
     movw %%ax, %%es                            \n\
