@@ -43,7 +43,7 @@ void clear(void) {
     cli_and_save(flags);
 
     int32_t i;
-    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
+    for(i=0; i < NUM_COLS * NUM_ROWS; i++) {
         *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
         *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
@@ -85,12 +85,8 @@ void update_screen(uint32_t terminal) {
     switch_page_directory(cur_task);
 
     active = terminal;
-    uint8_t *mem = get_video_mem();
-    memcpy((void *)mem, terminal_video[active], 0x1000);
-    /* uint8_t *mem = get_video_mem(); */
-    /* for (i = 0; i < 0x1000; i++) { */
-    /*     mem[i] = terminal_video[active][i]; */
-    /* } */
+
+    memcpy((void *)VIDEO, terminal_video[active], 0x1000);
 
     set_cursor(term_x[active], term_y[active]);
 

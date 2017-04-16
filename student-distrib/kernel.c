@@ -158,14 +158,19 @@ void entry (unsigned long magic, unsigned long addr) {
         :
         : "b"(shell_str));
     tasks[0]->terminal = 1;
+    update_screen(1);
+    clear();
     asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
                  :
                  : "b"(shell_str));
     tasks[0]->terminal = 2;
+    update_screen(2);
+    clear();
     asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
                  :
                  : "b"(shell_str));
     tasks[0]->terminal = 0;
+    update_screen(1);
 
     asm volatile (".1: hlt; jmp .1;");
 }
