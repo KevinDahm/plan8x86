@@ -16,7 +16,7 @@ uint32_t interupt_preempt = 0;
 
 static int cur_p = 0;
 
-void schedule(uint32_t esp) {
+void schedule(uint32_t *esp) {
     uint32_t ebp;
     asm volatile(" \n\
     movl %%ebp, %0 \n"
@@ -24,15 +24,12 @@ void schedule(uint32_t esp) {
                  :);
     tasks[cur_task]->regs.ebp = ebp;
 
-    int32_t do_tss = 0;
-
-    // schedule entered from user-land
-    if (tasks[cur_task]->kernel_esp - esp != 12) {
-        tasks[cur_task]->kernel_esp = ebp - 4;
-        do_tss = 1;
-    } else {
-        int x = 10;
-    }
+    // if the saved EIP points outside of kernel code then schedule entered from user-land
+    /* if (*(esp + 10) > (KERNEL + MB4)) { */
+    /*     tasks[cur_task]->kernel_esp; */
+    /* } else { */
+    /*     /\* tasks[cur_task]->kernel_esp = (uint32_t)(esp + 10); *\/ */
+    /* } */
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -54,9 +51,7 @@ void schedule(uint32_t esp) {
 
     switch_page_directory(cur_task);
 
-    if (do_tss) {
-        tss.esp0 = tasks[cur_task]->kernel_esp;
-    }
+    tss.esp0 = tasks[cur_task]->kernel_esp;
 
     ebp = tasks[cur_task]->regs.ebp;
     asm volatile(" \n\

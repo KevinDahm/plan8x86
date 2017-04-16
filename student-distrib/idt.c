@@ -3,6 +3,7 @@
 #include "lib.h"
 #include "task.h"
 #include "system_calls.h"
+#include "page.h"
 
 
 /* hang
@@ -53,7 +54,46 @@ void do_invalid_TSS(const struct pt_regs* regs, uint32_t error) { handle_excepti
 void do_segment_not_present(const struct pt_regs* regs, uint32_t error) { handle_exception("segment_not_present", regs->eip); }
 void do_stack_segment(const struct pt_regs* regs, uint32_t error) { handle_exception("stack_segment", regs->eip); }
 void do_general_protection(const struct pt_regs* regs, uint32_t error) { handle_exception("general_protection", regs->eip); }
-void do_page_fault(const struct pt_regs* regs, uint32_t error) { handle_exception("page_fault", regs->eip); }
+void do_page_fault(const struct pt_regs* regs, uint32_t error) {
+    /* handle_exception("page_fault", regs->eip); */
+    /* switch_page_directory(0); */
+    uint32_t cr2;
+    asm volatile("movl %%cr2, %0;"
+        : "=r"(cr2)
+        :);
+    blue_screen();
+    set_cursor(0, 0);
+    printf("Page fault.\n");
+    if (error & 0x1) {
+        printf("page-protection violation\n");
+    } else {
+        printf("non-present page\n");
+    }
+
+    if (error & 0x2) {
+        printf("page write\n");
+    } else {
+        printf("page read\n");
+    }
+
+    if (error & 0x4) {
+        printf("caused while CPL=3\n");
+    } else {
+        printf("caused while CPL=0\n");
+    }
+
+    if (error & 0x8) {
+        printf("caused by reading a 1 in a reserved field\n");
+    }
+
+    if (error & 0x10) {
+        printf("caused by an instruction fetch\n");
+    }
+
+    printf("caused by address: 0x%x\n", cr2);
+    printf("on EIP: 0x%x\n", regs->eip);
+    hang();
+}
 void do_coprocessor_error(const struct pt_regs* regs) { handle_exception("coprocessor_error", regs->eip); }
 void do_alignment_check(const struct pt_regs* regs, uint32_t error) { handle_exception("alignment_check", regs->eip); }
 void do_machine_check(const struct pt_regs* regs) { handle_exception("machine_check", regs->eip); }

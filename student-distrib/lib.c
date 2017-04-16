@@ -63,6 +63,9 @@ void blue_screen(void) {
 }
 
 void update_screen(uint32_t terminal) {
+    uint32_t flags;
+    cli_and_save(flags);
+
     if(terminal >= NUM_TERM || terminal == active){
         return;
     }
@@ -82,8 +85,16 @@ void update_screen(uint32_t terminal) {
     switch_page_directory(cur_task);
 
     active = terminal;
-    memcpy((void *)VIDEO, terminal_video[active], 0x1000);
+    uint8_t *mem = get_video_mem();
+    memcpy((void *)mem, terminal_video[active], 0x1000);
+    /* uint8_t *mem = get_video_mem(); */
+    /* for (i = 0; i < 0x1000; i++) { */
+    /*     mem[i] = terminal_video[active][i]; */
+    /* } */
+
     set_cursor(term_x[active], term_y[active]);
+
+    restore_flags(flags);
 }
 
 /*

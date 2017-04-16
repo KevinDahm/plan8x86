@@ -90,9 +90,7 @@ sys_call_err:
 .globl irq_0x0
 irq_0x0:
   SAVE_ALL
-  movl %esp, %eax
-  add $40, %eax
-  pushl %eax
+  pushl %esp
   call schedule
   addl $4, %esp
   RESTORE_ALL

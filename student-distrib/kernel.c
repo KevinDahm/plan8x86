@@ -153,7 +153,6 @@ void entry (unsigned long magic, unsigned long addr) {
 
     enable_irq(0);
 
-    tasks[0]->kernel_esp = tss.esp0;
     tasks[0]->terminal = 0;
     asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
         :

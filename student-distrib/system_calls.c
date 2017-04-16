@@ -52,6 +52,8 @@ int32_t sys_halt(uint32_t status) {
 }
 
 int32_t sys_execute(const uint8_t* command) {
+    cli();
+
     uint8_t com_str[strlen((int8_t*)command)];
     strcpy((int8_t*)com_str, (int8_t*)command);
 
@@ -125,8 +127,6 @@ int32_t sys_execute(const uint8_t* command) {
         cur_task = tasks[cur_task]->parent;
         return -1;
     }
-
-    cli();
 
     tasks[cur_task]->status = TASK_RUNNING;
     tasks[tasks[cur_task]->parent]->status = TASK_SLEEPING;
