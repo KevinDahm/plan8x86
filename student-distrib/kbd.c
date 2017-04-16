@@ -306,9 +306,6 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             tasks[cur_task]->status = TASK_SLEEPING;
             kbd_sleeping_tasks[cur_task] = 1;
         }
-
-        // Don't waste CPU cycles. Nothing's going to move until a kbd interrupt happens
-        asm volatile("hlt;");
     }
     return i;
 }

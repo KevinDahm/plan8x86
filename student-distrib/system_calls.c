@@ -15,7 +15,7 @@
 uint32_t halt_status;
 
 int32_t sys_halt(uint32_t status) {
-    tasks[cur_task]->kernel_esp = (KERNEL + MB4) - (cur_task * PER_TASK_KERNEL_STACK_SIZE);
+    tasks[cur_task]->kernel_esp = KERNEL_ESP_BASE(cur_task);
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {

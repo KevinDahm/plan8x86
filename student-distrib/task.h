@@ -61,6 +61,8 @@ typedef struct {
     /* uint32_t esp; */
 } regs_t;
 
+#define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE))
+
 typedef struct {
     int32_t status;
     file_desc_t file_descs[FILE_DESCS_LENGTH];

@@ -14,7 +14,7 @@ extern uint32_t term_process[NUM_TERM];
 
 extern uint32_t active;
 
-void schedule(int dev_id);
-void pit_init(irqaction* pit_handler);
+extern void schedule(uint32_t esp);
+void pit_init();
 
 #endif

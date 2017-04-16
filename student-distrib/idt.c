@@ -73,7 +73,5 @@ __attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
         (*irq_p->handle)(irq_p->dev_id);
         irq_p = irq_p->next;
     }
-    if (irq != 0) {
-        send_eoi(irq);
-    }
+    send_eoi(irq);
 }

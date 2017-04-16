@@ -89,8 +89,15 @@ sys_call_err:
 
 .globl irq_0x0
 irq_0x0:
-  pushl $0xFFFFFFFF
-  jmp common_interupt
+  SAVE_ALL
+  movl %esp, %eax
+  add $40, %eax
+  pushl %eax
+  call schedule
+  addl $4, %esp
+  RESTORE_ALL
+  iret
+
 .globl irq_0x1
 irq_0x1:
   pushl $0xFFFFFFFE

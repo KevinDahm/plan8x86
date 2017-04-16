@@ -22,7 +22,6 @@
 // NOTE: These cannot be declared on the stack because the kernel stack is destroyed when user processes start
 irqaction keyboard_handler;
 irqaction rtc_handler;
-irqaction pit_handler;
 
 int8_t shell_str[] = "shell";
 
@@ -139,7 +138,7 @@ void entry (unsigned long magic, unsigned long addr) {
     kbd_init(&keyboard_handler);
     set_intr_gate(0x21, irq_0x1);
 
-    pit_init(&pit_handler);
+    pit_init();
     set_intr_gate(0x20, irq_0x0);
 
     lidt(idt_desc_ptr);
@@ -152,9 +151,9 @@ void entry (unsigned long magic, unsigned long addr) {
     terminal_init();
     system_calls_init();
 
-    /* Execute the first program (`shell') ... */
     enable_irq(0);
 
+    tasks[0]->kernel_esp = tss.esp0;
     tasks[0]->terminal = 0;
     asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
         :

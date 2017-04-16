@@ -16,14 +16,23 @@ uint32_t interupt_preempt = 0;
 
 static int cur_p = 0;
 
-void schedule(int dev_id){
+void schedule(uint32_t esp) {
     uint32_t ebp;
     asm volatile(" \n\
     movl %%ebp, %0 \n"
                  : "=r"(ebp)
                  :);
     tasks[cur_task]->regs.ebp = ebp;
-    tasks[cur_task]->kernel_esp = ebp - 4;
+
+    int32_t do_tss = 0;
+
+    // schedule entered from user-land
+    if (tasks[cur_task]->kernel_esp - esp != 12) {
+        tasks[cur_task]->kernel_esp = ebp - 4;
+        do_tss = 1;
+    } else {
+        int x = 10;
+    }
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -45,26 +54,22 @@ void schedule(int dev_id){
 
     switch_page_directory(cur_task);
 
-    ebp = tasks[cur_task]->regs.ebp;
+    if (do_tss) {
+        tss.esp0 = tasks[cur_task]->kernel_esp;
+    }
 
+    ebp = tasks[cur_task]->regs.ebp;
     asm volatile(" \n\
     movl %0, %%ebp \n"
                  :
                  : "r"(ebp));
-
-    tss.esp0 = tasks[cur_task]->kernel_esp;
 
     send_eoi(0);
     // GCC compiles this function with no leave call. Thus the ebp becomes useless.
     asm volatile("leave; ret;" : :);
 }
 
-void pit_init(irqaction* pit_handler){
-    pit_handler->handle = schedule;
-    pit_handler->dev_id = 0x20;
-    pit_handler->next = NULL;
-    irq_desc[0x0] = pit_handler;
-
+void pit_init(){
     // 00110100b - Magic
     outb(0x34, 0x43);
     outb(0, 0x40);
