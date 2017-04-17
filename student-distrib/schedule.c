@@ -26,7 +26,7 @@ void schedule() {
         interupt_preempt = 0;
     } else {
 
-        cur_task = 0;
+        cur_task = INIT;
 
         int i;
         for (i = 0; i < (NUM_TASKS - 1); i++) {

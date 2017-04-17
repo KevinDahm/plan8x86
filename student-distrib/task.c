@@ -2,7 +2,7 @@
 #include "lib.h"
 #include "page.h"
 
-uint8_t cur_task = 0;
+uint8_t cur_task = INIT;
 
 /* setup_kernel_mem
  * Description: Sets up a 4KB page mapping to video memory
@@ -100,23 +100,28 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
  * Side Effects: Fills the tasks array.
  */
 void create_init() {
-    tasks[0] = (pcb_t *)((KERNEL + MB4) - (PER_TASK_KERNEL_STACK_SIZE));
-    memset(tasks[0], 0, sizeof(pcb_t));
-    tasks[0]->kernel_esp = KERNEL_ESP_BASE(0);
-    tasks[0]->status = TASK_RUNNING;
-    tasks[0]->page_directory = page_directory_tables[0];
-    tasks[0]->kernel_vid_table = page_tables[0][0];
+    // TODO: We forcibly take over stacks at the end of kernel space. Perhaps we should
+    // tell the linker that this space is reserved.
 
-    memset(tasks[0]->page_directory, 2, DIR_SIZE * 4);
-    memset(tasks[0]->kernel_vid_table, 2, DIR_SIZE * 4);
+    // Put the PCB at the end of the task's stack (beginning of the next tasks stack)
+    tasks[INIT] = (pcb_t *)KERNEL_ESP_BASE(INIT + 1);
+    memset(tasks[INIT], 0, sizeof(pcb_t));
+    tasks[INIT]->kernel_esp = KERNEL_ESP_BASE(INIT);
+    tasks[INIT]->status = TASK_RUNNING;
+    tasks[INIT]->page_directory = page_directory_tables[INIT];
+    tasks[INIT]->kernel_vid_table = page_tables[INIT][0];
 
-    setup_vid(tasks[0]->page_directory, tasks[0]->kernel_vid_table, 0);
+    memset(tasks[INIT]->page_directory, 2, DIR_SIZE * 4);
+    memset(tasks[INIT]->kernel_vid_table, 2, DIR_SIZE * 4);
 
-    setup_kernel_mem(tasks[0]->page_directory + 1);
+    setup_vid(tasks[INIT]->page_directory, tasks[INIT]->kernel_vid_table, 0);
+
+    setup_kernel_mem(tasks[INIT]->page_directory + 1);
 
     uint32_t task;
     for (task = 1; task < NUM_TASKS; task++) {
-        tasks[task] = (pcb_t *)((KERNEL + MB4) - ((task + 1) * PER_TASK_KERNEL_STACK_SIZE));
+        // Put the PCB at the end of the task's stack (beginning of the next tasks stack)
+        tasks[task] = (pcb_t *)KERNEL_ESP_BASE(task + 1);
         memset(tasks[task], 0, sizeof(pcb_t));
         tasks[task]->kernel_esp = KERNEL_ESP_BASE(task);
         tasks[task]->status = TASK_EMPTY;

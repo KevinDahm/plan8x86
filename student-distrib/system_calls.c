@@ -10,13 +10,23 @@
 #include "task.h"
 #include "schedule.h"
 
+// This is black magic. Be careful. Don't touch this.
+// This allows me to insert constants into to strings
+// See the end of sys_execute.
 #define st(a) #a
 #define str(a) st(a)
 
-uint32_t halt_status;
 
 uint8_t backup_init_ebp = 1;
 
+
+uint32_t halt_status;
+/* sys_halt
+ * Description: Stops the process that called this and returns control to the proccess that ran sys_execute
+ * Input:  status - The return value of the user process that called sys_halt
+ * Output: returns status
+ * Side Effects: resets the cur_task's pcb_t
+ */
 int32_t sys_halt(uint32_t status) {
     tasks[cur_task]->kernel_esp = KERNEL_ESP_BASE(cur_task);
     int i;
@@ -34,8 +44,8 @@ int32_t sys_halt(uint32_t status) {
 
     switch_page_directory(cur_task);
 
-    if(cur_task == 0){
-        tasks[0]->terminal = term;
+    if (cur_task == INIT) {
+        tasks[INIT]->terminal = term;
         update_screen(term);
         sys_execute((uint8_t*)"shell");
     }
@@ -54,19 +64,34 @@ int32_t sys_halt(uint32_t status) {
     return halt_status;
 }
 
+/* sys_execute
+ * Description: Starts a new process specified by command
+ * Input:  command - the process to start and any args to send to it
+ * Output: -1 on error, 0 on success
+ * Side Effects: modifies tasks
+ */
 int32_t sys_execute(const uint8_t* command) {
     cli();
 
+    // Copy the command string for parsing later
     uint8_t com_str[strlen((int8_t*)command)];
     strcpy((int8_t*)com_str, (int8_t*)command);
 
-    if (cur_task != 0 || backup_init_ebp) {
+    // Once INIT starts the initial shells don't move it's base pointer or
+    // sys_halt won't be able to restart an exited shell. This is because
+    // if we do INIT won't return to it's hlt loop and instead will jump
+    // into garbage from a random stack.
+    if (cur_task != INIT || backup_init_ebp) {
+        // Backup the ebp and kernel_esp of the parent task so that
+        // after sys_halt is called by the child the parent can be resumed
+        // in the correct location.
         uint32_t ebp;
         asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
         tasks[cur_task]->ebp = ebp;
         tasks[cur_task]->kernel_esp = ebp - 4;
     }
 
+    // Find the first empty task to place the new one in.
     int32_t fd;
     uint8_t task_num;
     for (task_num = 1; task_num < NUM_TASKS; task_num++) {
@@ -119,6 +144,7 @@ int32_t sys_execute(const uint8_t* command) {
     sys_read(fd, (void*)buf, stats.size);
     sys_close(fd);
 
+    // Magic executable bytes
     if (buf[0] != 0x7F || buf[1] != 0x45 || buf[2] != 0x4C || buf[3] != 0x46) {
         // File is not executable
         cur_task = tasks[cur_task]->parent;
@@ -156,6 +182,12 @@ int32_t sys_execute(const uint8_t* command) {
     return 0;
 }
 
+/* sys_execute
+ * Description: Starts a new process specified by command
+ * Input:  command - the process to start and any args to send to it
+ * Output: -1 on error, 0 on success
+ * Side Effects: modifies tasks
+ */
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;

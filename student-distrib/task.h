@@ -38,6 +38,8 @@ typedef struct file_desc {
 #define TASK_RUNNING 1
 #define TASK_SLEEPING 2
 
+#define INIT 0
+
 #define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE))
 
 typedef struct {

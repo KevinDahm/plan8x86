@@ -23,9 +23,6 @@
 irqaction keyboard_handler;
 irqaction rtc_handler;
 
-int8_t shell_str[] = "shell";
-
-
 void entry (unsigned long magic, unsigned long addr) {
     multiboot_info_t *mbi;
 
@@ -96,7 +93,7 @@ void entry (unsigned long magic, unsigned long addr) {
 
     // Paging and tasks structure setup
     create_init();
-    switch_page_directory(0);
+    switch_page_directory(INIT);
     init_paging();
 
     /* Init the PIC */
@@ -153,18 +150,12 @@ void entry (unsigned long magic, unsigned long addr) {
 
     enable_irq(0);
 
-    tasks[0]->terminal = 0;
-    execute_shell();
-
-    tasks[0]->terminal = 1;
-    update_screen(1);
-    clear();
-    execute_shell();
-
-    tasks[0]->terminal = 2;
-    update_screen(2);
-    clear();
-    execute_shell();
+    for (i = 0; i < NUM_TERM; i++) {
+        tasks[INIT]->terminal = i;
+        update_screen(i);
+        clear();
+        execute_shell();
+    }
 
     backup_init_ebp = 0;
     tasks[0]->terminal = 0;
