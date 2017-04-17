@@ -313,6 +313,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             tasks[cur_task]->status = TASK_SLEEPING;
         }
     }
+    tasks[cur_task]->status = TASK_RUNNING;
     return i;
 }
 
