@@ -3,6 +3,8 @@
 
 extern void ignore_int();
 
+extern void execute_shell();
+
 extern void divide_error();
 extern void debug();
 extern void nmi();

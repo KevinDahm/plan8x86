@@ -6,7 +6,7 @@
 void create_init();
 
 #define FILE_DESCS_LENGTH 8
-#define NUM_TASKS 3
+#define NUM_TASKS 10
 
 typedef struct file_ops {
     int32_t (*open)(const int8_t*);
@@ -36,29 +36,9 @@ typedef struct file_desc {
 
 #define TASK_EMPTY 0
 #define TASK_RUNNING 1
+#define TASK_SLEEPING 2
 
-/* typedef struct { */
-/*     uint32_t xss; */
-/*     uint32_t esp; */
-/*     uint32_t eflags; */
-/*     uint32_t ebx; */
-/*     uint32_t ecx; */
-/*     uint32_t edx; */
-/*     uint32_t esi; */
-/*     uint32_t edi; */
-/*     uint32_t ebp; */
-/*     uint32_t eax; */
-/*     uint32_t xds; */
-/*     uint32_t xes; */
-/*     uint32_t xfs; */
-/*     uint32_t eip; */
-/*     uint32_t xcs; */
-/* } regs_t; */
-
-typedef struct {
-    uint32_t ebp;
-    /* uint32_t esp; */
-} regs_t;
+#define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE))
 
 typedef struct {
     int32_t status;
@@ -66,16 +46,16 @@ typedef struct {
     uint32_t *page_directory;
     uint32_t *kernel_vid_table;
     uint32_t *usr_vid_table;
-    regs_t regs;
+    uint32_t ebp;
     uint8_t parent;
     uint32_t kernel_esp;
     uint8_t* arg_str;
+    uint32_t terminal;
+    uint8_t rtc_flag;
 } pcb_t;
-
-pcb_t init_pcb;
 
 pcb_t *tasks[NUM_TASKS];
 
-uint8_t cur_task;
+extern uint8_t cur_task;
 
 #endif
