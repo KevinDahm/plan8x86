@@ -16,20 +16,10 @@ uint32_t interupt_preempt = 0;
 
 static int cur_p = 0;
 
-void schedule(uint32_t *esp) {
+void schedule() {
     uint32_t ebp;
-    asm volatile(" \n\
-    movl %%ebp, %0 \n"
-                 : "=r"(ebp)
-                 :);
-    tasks[cur_task]->regs.ebp = ebp;
-
-    // if the saved EIP points outside of kernel code then schedule entered from user-land
-    /* if (*(esp + 10) > (KERNEL + MB4)) { */
-    /*     tasks[cur_task]->kernel_esp; */
-    /* } else { */
-    /*     /\* tasks[cur_task]->kernel_esp = (uint32_t)(esp + 10); *\/ */
-    /* } */
+    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+    tasks[cur_task]->ebp = ebp;
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -53,11 +43,8 @@ void schedule(uint32_t *esp) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    ebp = tasks[cur_task]->regs.ebp;
-    asm volatile(" \n\
-    movl %0, %%ebp \n"
-                 :
-                 : "r"(ebp));
+    ebp = tasks[cur_task]->ebp;
+    asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
 
     send_eoi(0);
     // GCC compiles this function with no leave call. Thus the ebp becomes useless.
@@ -68,7 +55,8 @@ void pit_init(){
     // 00110100b - Magic
     outb(0x34, 0x43);
     outb(0, 0x40);
-    outb(0, 0x40);
+    // ~15ms time slices
+    outb(75, 0x40);
 }
 
 

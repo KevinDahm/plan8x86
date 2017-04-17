@@ -11,7 +11,7 @@ static uint8_t caps_held = 0;
 
 static uint32_t write_index[NUM_TERM];
 static uint32_t read_index[NUM_TERM];
-static uint8_t buffer_full = 0;
+static uint8_t buffer_full[NUM_TERM];
 
 static kbd_t kbd_buffer[NUM_TERM][BUFFER_SIZE];
 
@@ -231,7 +231,7 @@ void _kbd_do_irq(int dev_id) {
         break;
     }
     // If buffer isn't full and a key is pressed
-    if(!buffer_full && kbd_state.state & 0xFF) {
+    if(!buffer_full[active] && kbd_state.state & 0xFF) {
 
         int f;
         for (f = 0; f < NUM_TERM; f++) {
@@ -252,7 +252,7 @@ void _kbd_do_irq(int dev_id) {
 
         // If buffer full, disable writing
         if (write_index[active] == read_index[active])
-            buffer_full = 1;
+            buffer_full[active] = 1;
     }
 
     e0_waiting = 0;
@@ -301,7 +301,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
             read_index[TASK_T] = (read_index[TASK_T] + 1)%BUFFER_SIZE;
             i += sizeof(kbd_t);
-            buffer_full = 0;
+            buffer_full[TASK_T] = 0;
         } else {
             tasks[cur_task]->status = TASK_SLEEPING;
             kbd_sleeping_tasks[cur_task] = 1;

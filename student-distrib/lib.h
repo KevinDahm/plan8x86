@@ -17,12 +17,12 @@ int8_t *strrev(int8_t* s);
 uint32_t strlen(const int8_t* s);
 void clear(void);
 void blue_screen(void);
+void update_cursor();
 void set_cursor(uint32_t x, uint32_t y);
 void set_color(uint8_t col);
+void move_up();
 void update_screen(uint32_t terminal);
 uint32_t get_active();
-uint32_t get_x();
-uint32_t get_y();
 
 void* memset(void* s, int32_t c, uint32_t n);
 void* memset_word(void* s, int32_t c, uint32_t n);

@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+extern uint8_t backup_init_ebp;
+
 extern int32_t sys_halt(uint32_t status);
 extern int32_t sys_execute(const uint8_t* command);
 extern int32_t sys_read(int32_t fd, void* buf, int32_t nbytes);

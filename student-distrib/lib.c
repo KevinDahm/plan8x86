@@ -23,31 +23,18 @@ uint8_t *get_video_mem() {
     }
 }
 
-uint32_t get_x() {
-    return term_x[TASK_T];
-}
-
-uint32_t get_y() {
-    return term_y[TASK_T];
-}
-
 /*
  * void clear(void);
  *   Inputs: void
  *   Return Value: none
  *    Function: Clears video memory
  */
-
 void clear(void) {
-    uint32_t flags;
-    cli_and_save(flags);
-
     int32_t i;
     for(i=0; i < NUM_COLS * NUM_ROWS; i++) {
         *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
         *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
-    restore_flags(flags);
 }
 
 /*
@@ -63,9 +50,6 @@ void blue_screen(void) {
 }
 
 void update_screen(uint32_t terminal) {
-    uint32_t flags;
-    cli_and_save(flags);
-
     if(terminal >= NUM_TERM || terminal == active){
         return;
     }
@@ -88,9 +72,18 @@ void update_screen(uint32_t terminal) {
 
     memcpy((void *)VIDEO, terminal_video[active], 0x1000);
 
-    set_cursor(term_x[active], term_y[active]);
+    update_cursor();
+}
 
-    restore_flags(flags);
+void update_cursor() {
+    unsigned short position = (term_y[active] * NUM_COLS) + term_x[active];
+
+    // cursor LOW port to vga INDEX register
+    outb(0x0F, 0x3D4);
+    outb((unsigned char)(position & 0xFF), 0x3D5);
+    // cursor HIGH port to vga INDEX register
+    outb(0x0E, 0x3D4);
+    outb((unsigned char )((position >> 8) & 0xFF), 0x3D5);
 }
 
 /*
@@ -99,58 +92,35 @@ void update_screen(uint32_t terminal) {
  *   Return Value: none
  *    Function: Sets cursor to columnn x, row y
  */
-
 void set_cursor(uint32_t x, uint32_t y) {
-    uint32_t flags;
-    cli_and_save(flags);
-
-    while(x < 0){
-        x+=NUM_COLS;
-        y--;
-    }while(x >= NUM_COLS){
-        x-=NUM_COLS;
-        y++;
-    }
-    if(y < 0 || y >= NUM_ROWS)
+    if (x >= NUM_COLS || y >= NUM_ROWS) {
         return;
+    }
+
     term_x[TASK_T] = x;
     term_y[TASK_T] = y;
 
-    if(IS_ACTIVE) {
-        unsigned short position = (y * NUM_COLS) + x;
-
-        // cursor LOW port to vga INDEX register
-        outb(0x0F, 0x3D4);
-        outb((unsigned char)(position & 0xFF), 0x3D5);
-        // cursor HIGH port to vga INDEX register
-        outb(0x0E, 0x3D4);
-        outb((unsigned char )((position >> 8) & 0xFF), 0x3D5);
-    }
-    restore_flags(flags);
+    update_cursor();
 }
+
 /*
  * void set_color(col);
  *   Inputs: col - Color to use
  *   Return Value: none
  *    Function: Sets future writes to given color
  */
-
-void set_color(uint8_t col){
+void set_color(uint8_t col) {
     color[TASK_T] = col;
 }
 
-void move_up(){
-    uint32_t flags;
-    cli_and_save(flags);
-
+void move_up() {
     int i;
-    (term_y[TASK_T])--;
+    term_y[TASK_T]--;
     memmove((void*)get_video_mem(), (void*)(get_video_mem() + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
     for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
         *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
-    restore_flags(flags);
 }
 /* Standard printf().
  * Only supports the following format strings:
@@ -170,9 +140,7 @@ void move_up(){
  *       Also note: %x is the only conversion specifier that can use
  *       the "#" modifier to alter output.
  * */
-int32_t
-printf(int8_t *format, ...)
-{
+int32_t printf(int8_t *format, ...) {
     /* Pointer to the format string */
     int8_t* buf = format;
 
@@ -287,10 +255,7 @@ printf(int8_t *format, ...)
  *   Return Value: Number of bytes written
  *    Function: Output a string to the console
  */
-
-int32_t
-puts(int8_t* s)
-{
+int32_t puts(int8_t* s) {
     register int32_t index = 0;
     while(s[index] != '\0') {
         putc(s[index]);
@@ -306,15 +271,11 @@ puts(int8_t* s)
  *   Return Value: void
  *    Function: Output a character to the console
  */
-
 void putc(uint8_t c) {
-    uint32_t flags;
-    cli_and_save(flags);
-
     int i;
     if(c == '\n' || c == '\r') {
-        (term_y[TASK_T])++;
-        term_x[TASK_T]=0;
+        term_y[TASK_T]++;
+        term_x[TASK_T] = 0;
         if(term_y[TASK_T] == NUM_ROWS){
             move_up();
         }
@@ -325,15 +286,14 @@ void putc(uint8_t c) {
     }else {
         *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = c;
         *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
-        (term_x[TASK_T])++;
-        term_y[TASK_T] = (term_y[TASK_T] + (term_x[TASK_T] / NUM_COLS));
-        if(term_y[TASK_T] == NUM_ROWS)
+        term_x[TASK_T]++;
+        term_y[TASK_T] = term_y[TASK_T] + (term_x[TASK_T] / NUM_COLS);
+        if (term_y[TASK_T] == NUM_ROWS)
             move_up();
         term_x[TASK_T] %= NUM_COLS;
 
     }
-    set_cursor(term_x[TASK_T], term_y[TASK_T]);
-    restore_flags(flags);
+    update_cursor();
 }
 
 /*
@@ -341,11 +301,7 @@ void putc(uint8_t c) {
  *   Return Value: void
  *    Function: removes a character from the console
  */
-
 void removec() {
-    uint32_t flags;
-    cli_and_save(flags);
-
     if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
         return;
     (term_x[TASK_T])--;
@@ -355,7 +311,8 @@ void removec() {
     }
     *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = ' ';
     *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
-    restore_flags(flags);
+
+    update_cursor();
 }
 
 /*

@@ -56,11 +56,6 @@ typedef struct file_desc {
 /*     uint32_t xcs; */
 /* } regs_t; */
 
-typedef struct {
-    uint32_t ebp;
-    /* uint32_t esp; */
-} regs_t;
-
 #define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE))
 
 typedef struct {
@@ -69,11 +64,12 @@ typedef struct {
     uint32_t *page_directory;
     uint32_t *kernel_vid_table;
     uint32_t *usr_vid_table;
-    regs_t regs;
+    uint32_t ebp;
     uint8_t parent;
     uint32_t kernel_esp;
     uint8_t* arg_str;
     uint32_t terminal;
+    uint8_t rtc_flag;
 } pcb_t;
 
 pcb_t *tasks[NUM_TASKS];

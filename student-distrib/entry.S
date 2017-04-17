@@ -1,6 +1,8 @@
   .data
 unknown_string:
   .ascii "Unknown interrupt\0"
+shell_str:
+  .ascii "shell"
 system_calls_jumptable:
   .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_stat
 
@@ -30,6 +32,15 @@ system_calls_jumptable:
   popl %ds; \
   popl %es; \
   popl %fs; \
+
+.globl execute_shell
+execute_shell:
+  movl $2, %eax
+  movl $shell_str, %ebx
+  xorl %ecx, %ecx
+  xorl %edx, %edx
+  int $0x80
+  ret
 
 .globl ignore_int
 ignore_int:
@@ -90,9 +101,7 @@ sys_call_err:
 .globl irq_0x0
 irq_0x0:
   SAVE_ALL
-  pushl %esp
   call schedule
-  addl $4, %esp
   RESTORE_ALL
   iret
 

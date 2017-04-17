@@ -14,7 +14,7 @@ extern uint32_t term_process[NUM_TERM];
 
 extern uint32_t active;
 
-extern void schedule(uint32_t *esp);
+extern void schedule();
 void pit_init();
 
 #endif

@@ -3,7 +3,6 @@
 #include "idt.h"
 #include "i8259.h"
 static void do_rtc_irq(int dev_id);
-static int8_t rtc_flag;
 static uint8_t num_open;
 
 /* void rtc_init(irqaction* rtc_handler)
@@ -84,7 +83,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
  */
 int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     if(nbytes != 4){
-        return -1;
+        return 0;
     }
     //disable interrupts while writing to the rtc
     uint32_t flags;
@@ -101,9 +100,9 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
 
     //loop until RTC interrupt
     do{
-        rtc_flag = 1;
+        tasks[cur_task]->rtc_flag = 1;
         asm volatile("hlt");
-    }while(rtc_flag);
+    }while(tasks[cur_task]->rtc_flag);
 
     return 0;
 }
@@ -156,7 +155,10 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
 void do_rtc_irq(int dev_id) {
 
     //Reset rtc_flag
-    rtc_flag = 0;
+    uint8_t task;
+    for (task = 0; task < NUM_TASKS; task++) {
+        tasks[task]->rtc_flag = 0;
+    }
     //read port C to acknowledge the interrupt
     outb(CHOOSE_RTC_C, RTC_PORT);
     inb(RTC_PORT + 1);

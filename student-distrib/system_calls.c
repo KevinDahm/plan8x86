@@ -5,6 +5,7 @@
 #include "kbd.h"
 #include "terminal.h"
 #include "page.h"
+#include "entry.h"
 #include "x86_desc.h"
 #include "task.h"
 #include "schedule.h"
@@ -13,6 +14,8 @@
 #define str(a) st(a)
 
 uint32_t halt_status;
+
+uint8_t backup_init_ebp = 1;
 
 int32_t sys_halt(uint32_t status) {
     tasks[cur_task]->kernel_esp = KERNEL_ESP_BASE(cur_task);
@@ -30,21 +33,21 @@ int32_t sys_halt(uint32_t status) {
     tasks[cur_task]->status = TASK_RUNNING;
 
     switch_page_directory(cur_task);
+
     if(cur_task == 0){
         tasks[0]->terminal = term;
+        update_screen(term);
         sys_execute((uint8_t*)"shell");
     }
 
-    uint32_t ebp = tasks[cur_task]->regs.ebp;
+    uint32_t ebp = tasks[cur_task]->ebp;
     term_process[tasks[cur_task]->terminal] = cur_task;
+
     // Save the return value before moving the stack.
     // halt_status has to be static memory, it cannot be on the stack.
     halt_status = status;
 
-    asm volatile(" \n\
-    movl %0, %%ebp \n"
-                 :
-                 : "r"(ebp));
+    asm volatile("movl %0, %%ebp;" : : "r"(ebp));
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
@@ -57,18 +60,12 @@ int32_t sys_execute(const uint8_t* command) {
     uint8_t com_str[strlen((int8_t*)command)];
     strcpy((int8_t*)com_str, (int8_t*)command);
 
-    uint32_t ebp;
-
-    asm volatile(" \n\
-    movl %%ebp, %0 \n"
-                 : "=r"(ebp)
-                 :);
-    tasks[cur_task]->regs.ebp = ebp;
-    tasks[cur_task]->kernel_esp = ebp - 4;
-    /* printf(" %xe %d", ebp, cur_task); */
-    /* tasks[cur_task].regs.esp = ebp + 4; */
-    /* r -= 20; */
-    /* memcpy(&tasks[cur_task].regs, r, sizeof(regs_t)); */
+    if (cur_task != 0 || backup_init_ebp) {
+        uint32_t ebp;
+        asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+        tasks[cur_task]->ebp = ebp;
+        tasks[cur_task]->kernel_esp = ebp - 4;
+    }
 
     int32_t fd;
     uint8_t task_num;
@@ -214,6 +211,7 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
+            tasks[cur_task]->rtc_flag = 0;
 
             tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;

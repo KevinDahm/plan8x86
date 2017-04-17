@@ -154,23 +154,21 @@ void entry (unsigned long magic, unsigned long addr) {
     enable_irq(0);
 
     tasks[0]->terminal = 0;
-    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
-        :
-        : "b"(shell_str));
+    execute_shell();
+
     tasks[0]->terminal = 1;
     update_screen(1);
     clear();
-    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
-                 :
-                 : "b"(shell_str));
+    execute_shell();
+
     tasks[0]->terminal = 2;
     update_screen(2);
     clear();
-    asm volatile("movl $2, %%eax; movl %0, %%ebx; movl $0, %%ecx; movl $0, %%edx; int $0x80;"
-                 :
-                 : "b"(shell_str));
+    execute_shell();
+
+    backup_init_ebp = 0;
     tasks[0]->terminal = 0;
-    update_screen(1);
+    update_screen(0);
 
     asm volatile (".1: hlt; jmp .1;");
 }
