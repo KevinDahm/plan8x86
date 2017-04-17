@@ -40,7 +40,7 @@ typedef struct file_desc {
 
 #define INIT 0
 
-#define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - (task * PER_TASK_KERNEL_STACK_SIZE))
+#define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - ((task) * PER_TASK_KERNEL_STACK_SIZE))
 
 typedef struct {
     int32_t status;
