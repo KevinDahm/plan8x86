@@ -28,7 +28,7 @@ uint32_t halt_status;
  * Side Effects: resets the cur_task's pcb_t
  */
 int32_t sys_halt(uint32_t status) {
-    tasks[cur_task]->kernel_esp = KERNEL_ESP_BASE(cur_task);
+    tasks[cur_task]->kernel_esp = (uint32_t)&task_stacks[cur_task].stack_start;
     int i;
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {

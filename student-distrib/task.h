@@ -40,7 +40,7 @@ typedef struct file_desc {
 
 #define INIT 0
 
-#define KERNEL_ESP_BASE(task) ((KERNEL + MB4) - ((task) * PER_TASK_KERNEL_STACK_SIZE))
+
 
 typedef struct {
     int32_t status;
@@ -55,6 +55,16 @@ typedef struct {
     uint32_t terminal;
     bool rtc_flag;
 } pcb_t;
+
+#define KERNEL_STACK_SIZE 0x8000
+
+typedef struct {
+    pcb_t pcb;
+    uint8_t stack[KERNEL_STACK_SIZE - sizeof(pcb_t) - 1];
+    uint8_t stack_start;
+} kernel_stack_t;
+
+kernel_stack_t task_stacks[NUM_TASKS] __attribute__((aligned (KERNEL_STACK_SIZE)));
 
 pcb_t *tasks[NUM_TASKS];
 

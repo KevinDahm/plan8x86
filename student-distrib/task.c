@@ -100,13 +100,10 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
  * Side Effects: Fills the tasks array.
  */
 void create_init() {
-    // TODO: We forcibly take over stacks at the end of kernel space. Perhaps we should
-    // tell the linker that this space is reserved.
-
-    // Put the PCB at the end of the task's stack (beginning of the next tasks stack)
-    tasks[INIT] = (pcb_t *)KERNEL_ESP_BASE(INIT + 1);
+    tasks[INIT] = &task_stacks[INIT].pcb;
     memset(tasks[INIT], 0, sizeof(pcb_t));
-    tasks[INIT]->kernel_esp = KERNEL_ESP_BASE(INIT);
+    tasks[INIT]->kernel_esp = (uint32_t)&task_stacks[INIT].stack_start;
+    
     tasks[INIT]->status = TASK_RUNNING;
     tasks[INIT]->page_directory = page_directory_tables[INIT];
     tasks[INIT]->kernel_vid_table = page_tables[INIT][0];
@@ -120,10 +117,9 @@ void create_init() {
 
     uint32_t task;
     for (task = 1; task < NUM_TASKS; task++) {
-        // Put the PCB at the end of the task's stack (beginning of the next tasks stack)
-        tasks[task] = (pcb_t *)KERNEL_ESP_BASE(task + 1);
+        tasks[task] = &task_stacks[task].pcb;
         memset(tasks[task], 0, sizeof(pcb_t));
-        tasks[task]->kernel_esp = KERNEL_ESP_BASE(task);
+        tasks[task]->kernel_esp = (uint32_t)&task_stacks[task].stack_start;
         tasks[task]->status = TASK_EMPTY;
 
         tasks[task]->page_directory = page_directory_tables[task];
