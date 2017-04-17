@@ -17,7 +17,7 @@
 #define str(a) st(a)
 
 
-uint8_t backup_init_ebp = 1;
+bool backup_init_ebp = true;
 
 
 uint32_t halt_status;
@@ -77,7 +77,7 @@ int32_t sys_execute(const uint8_t* command) {
     uint8_t com_str[strlen((int8_t*)command)];
     strcpy((int8_t*)com_str, (int8_t*)command);
 
-    // Once INIT starts the initial shells don't move it's base pointer or
+    // Once INIT starts the initial shells, don't move it's base pointer or
     // sys_halt won't be able to restart an exited shell. This is because
     // if we do INIT won't return to it's hlt loop and instead will jump
     // into garbage from a random stack.
@@ -271,7 +271,7 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
-            tasks[cur_task]->rtc_flag = 0;
+            tasks[cur_task]->rtc_flag = false;
 
             tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
@@ -357,11 +357,6 @@ int32_t sys_set_handler(int32_t signum, void* handler_address) {
 
 int32_t sys_sigreturn(void) {
     return -1;
-}
-
-// TODO: processes
-void system_calls_init() {
-    cur_task = 0;
 }
 
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {

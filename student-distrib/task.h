@@ -53,7 +53,7 @@ typedef struct {
     uint32_t kernel_esp;
     uint8_t* arg_str;
     uint32_t terminal;
-    uint8_t rtc_flag;
+    bool rtc_flag;
 } pcb_t;
 
 pcb_t *tasks[NUM_TASKS];

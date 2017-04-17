@@ -99,10 +99,10 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     kbd_t k;
     int32_t total = 0;
     int8_t a;
-    nbytes = nbytes > 128 ? 128 : nbytes; //Cap line size at 128
+    nbytes = nbytes > KBD_BUFFER_SIZE ? KBD_BUFFER_SIZE : nbytes; //Cap line size at 128
     memset(buf, 0, nbytes);
     // TODO: Arrow keys?
-    while (1) { //Keep reading
+    while (true) { //Keep reading
         if (kbd_read(0, &k, 2)){ //Read a single key
             if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
                 clear();

@@ -11,8 +11,7 @@ uint32_t term_process[NUM_TERM] = {0, 0, 0};
 
 uint32_t active = 0;
 
-// TODO: Get rid of this, this is hacky
-uint32_t interupt_preempt = 0;
+bool interupt_preempt = false;
 
 static int cur_p = 0;
 
@@ -23,11 +22,14 @@ void schedule() {
 
     if (interupt_preempt) {
         cur_task = term_process[active];
-        interupt_preempt = 0;
+        interupt_preempt = false;
     } else {
 
         cur_task = INIT;
 
+        // Starting with the task after the last one scheduled look for the
+        // first task that is TASK_RUNNING, but skip over INIT.
+        // If no task needs to be scheduled, only then do we schedule INIT
         int i;
         for (i = 0; i < (NUM_TASKS - 1); i++) {
             uint8_t task_i = ((cur_p + i) % (NUM_TASKS - 1)) + 1;
@@ -52,7 +54,7 @@ void schedule() {
 }
 
 void pit_init(){
-    // 00110100b - Magic
+    // 00110100b - Magic (sets the pit up for regular interrupts on IRQ0)
     outb(0x34, 0x43);
     outb(0, 0x40);
     // ~15ms time slices

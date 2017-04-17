@@ -12,6 +12,8 @@
 #define ATTRIB 0x7
 #define BLUE 0x1F
 
+#define TAB_SIZE 4
+
 static int32_t color[NUM_TERM] = {ATTRIB, ATTRIB, ATTRIB};
 static int32_t term_x[NUM_TERM];
 static int32_t term_y[NUM_TERM];
@@ -32,7 +34,7 @@ uint8_t *get_video_mem() {
  */
 void clear(void) {
     int32_t i;
-    for(i=0; i < NUM_COLS * NUM_ROWS; i++) {
+    for(i = 0; i < NUM_COLS * NUM_ROWS; i++) {
         *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
         *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
@@ -282,7 +284,7 @@ void putc(uint8_t c) {
             move_up();
         }
     } else if(c == '\t'){
-        for(i = 0; i < 4; i++){
+        for(i = 0; i < TAB_SIZE; i++){
             putc(' ');
         }
     }else {
@@ -306,9 +308,9 @@ void putc(uint8_t c) {
 void removec() {
     if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
         return;
-    (term_x[TASK_T])--;
+    term_x[TASK_T]--;
     if(term_x[TASK_T] == -1) {
-        (term_y[TASK_T])--;
+        term_y[TASK_T]--;
         term_x[TASK_T] += NUM_COLS;
     }
     *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = ' ';

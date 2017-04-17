@@ -146,7 +146,6 @@ void entry (unsigned long magic, unsigned long addr) {
     sti();
 
     terminal_init();
-    system_calls_init();
 
     enable_irq(0);
 
@@ -157,7 +156,7 @@ void entry (unsigned long magic, unsigned long addr) {
         execute_shell();
     }
 
-    backup_init_ebp = 0;
+    backup_init_ebp = false;
     tasks[0]->terminal = 0;
     update_screen(0);
 

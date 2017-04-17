@@ -7,6 +7,8 @@
 #include "filesystem.h"
 #include "task.h"
 
+#define KBD_BUFFER_SIZE 128
+
 // Struct for current kdb state
 typedef struct kbd {
     union {
@@ -96,4 +98,6 @@ extern int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes);
 #define ENTER 0x6B
 #define BKSP_KEY 0x2D
 #define TAB_KEY 0x40
+
+
 #endif
