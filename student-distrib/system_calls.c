@@ -110,6 +110,8 @@ int32_t sys_execute(const uint8_t* command) {
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
 
+    // Parse arguments from command. command should still be on this stack
+    // when getargs is called so just store a pointer to the correct offset.
     uint32_t i = 0;
     while(com_str[i] != ' ' && com_str[i] != '\0') i++;
     com_str[i] = '\0';
@@ -117,14 +119,14 @@ int32_t sys_execute(const uint8_t* command) {
     while(com_str[i] == ' ') i++;
     tasks[cur_task]->arg_str = com_str + i;
 
+    // If the file cannot be found error
     if ((fd = sys_open(com_str)) == -1) {
         cur_task = tasks[cur_task]->parent;
         return -1;
     }
 
-    fstat_t stats;
-    sys_stat(fd, &stats, sizeof(fstat_t));
-
+    // Inherit the terminal from parent. Also sets the usr_vid_table page up depending
+    // on whether terminal is focused.
     tasks[cur_task]->terminal = tasks[tasks[cur_task]->parent]->terminal;
     term_process[tasks[cur_task]->terminal] = cur_task;
     if (tasks[cur_task]->terminal == active) {
@@ -137,9 +139,14 @@ int32_t sys_execute(const uint8_t* command) {
 
     switch_page_directory(cur_task);
 
+    // Clear user memory (we don't want to leave data from previous processes
+    // as that could be a huge vulnerability)
     memset((void*)TASK_ADDR, 0, MB4);
 
     int8_t *buf = (int8_t*)(TASK_ADDR + USR_CODE_OFFSET);
+
+    fstat_t stats;
+    sys_stat(fd, &stats, sizeof(fstat_t));
 
     sys_read(fd, (void*)buf, stats.size);
     sys_close(fd);
@@ -154,12 +161,17 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->status = TASK_RUNNING;
     tasks[tasks[cur_task]->parent]->status = TASK_SLEEPING;
 
+    // A pointer to the first instruction is stored in bytes 24-27
     uint32_t start = ((uint32_t *)buf)[6];
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
     uint32_t user_stack_addr = TASK_ADDR + MB4;
 
+    // Setup an iret context on the stack with user CS and DS,
+    // an EIP of start and an ESP of user_stack_addr
+    // NOTE: in order to enable interrupts we OR the
+    // sti flag (0x200) on EFLAGS so that iret will sti for us.
     asm volatile("                             \n\
     movw $" str(USER_DS) ", %%ax               \n\
     movw %%ax, %%ds                            \n\
@@ -182,11 +194,13 @@ int32_t sys_execute(const uint8_t* command) {
     return 0;
 }
 
-/* sys_execute
- * Description: Starts a new process specified by command
- * Input:  command - the process to start and any args to send to it
- * Output: -1 on error, 0 on success
- * Side Effects: modifies tasks
+/* sys_read
+ * Description: reads nbytes from the file pointed to by fd into buf
+ * Input:  fd - the file descriptor to read from
+ *         buf - the buffer to read into
+ *         nbytes - the number of bytes to read
+ * Output: -1 on error, number of bytes read otherwise
+ * Side Effects: none
  */
 int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
@@ -204,6 +218,14 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     }
 }
 
+/* sys_write
+ * Description: writes nbytes of buf into the file pointed to by fd (unimplemented on filesystem)
+ * Input:  fd - the file descriptor to write to
+ *         buf - the buffer to write from
+ *         nbytes - the number of bytes to write
+ * Output: -1 on error, number of bytes written otherwise
+ * Side Effects: writes to fd
+ */
 int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;
@@ -217,6 +239,12 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     }
 }
 
+/* sys_open
+ * Description: opens the file filename for cur_task and returns an fd for it
+ * Input:  filename - the file to open
+ * Output: -1 on error, fd otherwise
+ * Side Effects: writes to tasks[cur_task]->file_descs
+ */
 int32_t sys_open(const uint8_t* filename) {
     if (!strncmp((int8_t*)filename, "/dev/stdin", strlen("/dev/stdin"))) {
         tasks[cur_task]->file_descs[0].ops = &stdin_ops;
