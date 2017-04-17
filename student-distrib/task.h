@@ -58,12 +58,14 @@ typedef struct {
 
 #define KERNEL_STACK_SIZE 0x8000
 
+// This allocates enough space for a kernel stack and puts a pcb_t at the end of it
 typedef struct {
     pcb_t pcb;
     uint8_t stack[KERNEL_STACK_SIZE - sizeof(pcb_t) - 1];
     uint8_t stack_start;
 } kernel_stack_t;
 
+// Let the linker know how much space all the kernel stacks will take up
 kernel_stack_t task_stacks[NUM_TASKS] __attribute__((aligned (KERNEL_STACK_SIZE)));
 
 pcb_t *tasks[NUM_TASKS];
