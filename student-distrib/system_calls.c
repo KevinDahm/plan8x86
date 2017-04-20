@@ -107,6 +107,37 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[task_num]->parent = cur_task;
     cur_task = task_num;
 
+    tasks[cur_task]->page_directory = page_directory_tables[cur_task];
+    tasks[cur_task]->kernel_vid_table = page_tables[cur_task][0];
+    tasks[cur_task]->usr_vid_table = page_tables[cur_task][1];
+
+    memset(tasks[cur_task]->page_directory, 2, DIR_SIZE * 4);
+    memset(tasks[cur_task]->kernel_vid_table, 2, DIR_SIZE * 4);
+    memset(tasks[cur_task]->usr_vid_table, 2, DIR_SIZE * 4);
+
+    setup_vid(tasks[cur_task]->page_directory, tasks[cur_task]->kernel_vid_table, 0);
+    setup_vid(tasks[cur_task]->page_directory + 33, tasks[cur_task]->usr_vid_table, 1);
+
+    // 1 * 4MB for virtual address of 4MB
+    setup_kernel_mem(tasks[cur_task]->page_directory + 1);
+
+    // 32 * 4MB for virtual address of 128MB
+    setup_task_mem(tasks[cur_task]->page_directory + 32, cur_task);
+
+    // Inherit the terminal from parent. Also sets the usr_vid_table page up depending
+    // on whether terminal is focused.
+    tasks[cur_task]->terminal = tasks[tasks[cur_task]->parent]->terminal;
+    term_process[tasks[cur_task]->terminal] = cur_task;
+    if (tasks[cur_task]->terminal == active) {
+        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
+        usr_vid_table->addr = VIDEO >> 12;
+    } else {
+        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
+        usr_vid_table->addr = (uint32_t)terminal_video[tasks[cur_task]->terminal] >> 12;
+    }
+
+    switch_page_directory(cur_task);
+
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
 
@@ -124,20 +155,6 @@ int32_t sys_execute(const uint8_t* command) {
         cur_task = tasks[cur_task]->parent;
         return -1;
     }
-
-    // Inherit the terminal from parent. Also sets the usr_vid_table page up depending
-    // on whether terminal is focused.
-    tasks[cur_task]->terminal = tasks[tasks[cur_task]->parent]->terminal;
-    term_process[tasks[cur_task]->terminal] = cur_task;
-    if (tasks[cur_task]->terminal == active) {
-        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
-        usr_vid_table->addr = VIDEO >> 12;
-    } else {
-        page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[cur_task]->usr_vid_table;
-        usr_vid_table->addr = (uint32_t)terminal_video[tasks[cur_task]->terminal] >> 12;
-    }
-
-    switch_page_directory(cur_task);
 
     // Clear user memory (we don't want to leave data from previous processes
     // as that could be a huge vulnerability)
@@ -357,6 +374,93 @@ int32_t sys_set_handler(int32_t signum, void* handler_address) {
 
 int32_t sys_sigreturn(void) {
     return -1;
+}
+
+int32_t sys_vidmap_all(uint8_t** screen_start) {
+    if ((uint32_t)screen_start < TASK_ADDR || (uint32_t)screen_start >= (TASK_ADDR + MB4)) {
+        return -1;
+    }
+
+    uint32_t vid_mem = 0xA0000;
+    uint8_t i = 0;
+    for (i = 0; i < 32; i++) {
+        page_table_kb_entry_t* vid_entry = (page_table_kb_entry_t *)&tasks[cur_task]->usr_vid_table[i];
+        vid_entry->addr = (vid_mem >> 12);
+        vid_entry->avail = 0;
+        vid_entry->global = 0;
+        vid_entry->pgTblAttIdx = 0;
+        vid_entry->dirty = 0;
+        vid_entry->accessed = 0;
+        vid_entry->cacheDisabled = 0;
+        vid_entry->writeThrough = 1;  //1 for fun
+        vid_entry->userSupervisor = 1;
+        vid_entry->readWrite = 1;     //Write enabled
+        vid_entry->present = 1;
+
+        vid_mem += 0x1000;
+    }
+
+    switch_page_directory(cur_task);
+
+    *screen_start = (uint8_t *)(TASK_ADDR + MB4);
+
+    return 0;
+}
+
+int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
+    // TODO: Use the TSS to avoid giving permisions for all ports
+    uint32_t *ebp;
+    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+    ebp[17] |= 0x3000;
+
+    return 0;
+}
+
+int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
+    uint8_t task_num;
+    for (task_num = 1; task_num < NUM_TASKS; task_num++) {
+        if (tasks[task_num]->status == TASK_EMPTY) {
+            break;
+        }
+    }
+
+    if (task_num >= NUM_TASKS) {
+        return -1;
+    }
+
+    memcpy(tasks[task_num], tasks[cur_task], sizeof(pcb_t));
+    tasks[task_num]->parent = cur_task;
+    tasks[task_num]->kernel_esp = (uint32_t)&task_stacks[task_num].stack_start;
+    uint32_t ebp;
+    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+    tasks[cur_task]->ebp = ebp;
+
+    cur_task = task_num;
+    switch_page_directory(cur_task);
+    tss.esp0 = tasks[cur_task]->kernel_esp;
+
+    uint32_t user_stack_addr = TASK_ADDR + MB4 - MB;
+
+    asm volatile("                             \n\
+    movw $" str(USER_DS) ", %%ax               \n\
+    movw %%ax, %%ds                            \n\
+    movw %%ax, %%es                            \n\
+    movw %%ax, %%fs                            \n\
+    movw %%ax, %%gs                            \n\
+                                               \n\
+    pushl $" str(USER_DS) "                    \n\
+    pushl %1                                   \n\
+    pushf                                      \n\
+    popl %%eax                                 \n\
+    orl $0x200, %%eax                          \n\
+    pushl %%eax                                \n\
+    pushl $" str(USER_CS) "                    \n\
+    pushl %0                                   \n\
+    iret                                       \n\
+    "
+                 :
+                 : "b"(thread_start), "c"(user_stack_addr));
+    return 0;
 }
 
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {

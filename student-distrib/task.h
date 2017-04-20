@@ -4,6 +4,9 @@
 #include "types.h"
 
 void create_init();
+void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv);
+void setup_kernel_mem(uint32_t *dir);
+void setup_task_mem(uint32_t *dir, uint32_t task);
 
 #define FILE_DESCS_LENGTH 8
 #define NUM_TASKS 10

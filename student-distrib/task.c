@@ -103,7 +103,7 @@ void create_init() {
     tasks[INIT] = &task_stacks[INIT].pcb;
     memset(tasks[INIT], 0, sizeof(pcb_t));
     tasks[INIT]->kernel_esp = (uint32_t)&task_stacks[INIT].stack_start;
-    
+
     tasks[INIT]->status = TASK_RUNNING;
     tasks[INIT]->page_directory = page_directory_tables[INIT];
     tasks[INIT]->kernel_vid_table = page_tables[INIT][0];

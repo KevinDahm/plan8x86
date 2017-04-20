@@ -4,7 +4,7 @@ unknown_string:
 shell_str:
   .ascii "shell"
 system_calls_jumptable:
-  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_stat
+  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_vidmap_all, sys_ioperm, sys_thread_create, sys_thread_join
 
   .text
 
@@ -59,8 +59,6 @@ common_interupt:
   addl $4, %esp
   iret
 
-  // TODO: pop any error codes that may exist off the stack
-  // NOTE: http://wiki.osdev.org/Exceptions
 common_exception:
   SAVE_ALL
   movl 40(%esp), %eax
@@ -80,7 +78,7 @@ system_call:
   movl $0, %esi
   cmp %eax, %esi
   je sys_call_err
-  movl $11, %esi
+  movl $15, %esi
   cmp %esi, %eax
   ja sys_call_err
   pushl %edx

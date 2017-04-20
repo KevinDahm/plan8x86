@@ -140,6 +140,7 @@ void entry (unsigned long magic, unsigned long addr) {
 
     lidt(idt_desc_ptr);
 
+    video_init();
     clear();
     set_cursor(0, 0);
 
@@ -152,7 +153,6 @@ void entry (unsigned long magic, unsigned long addr) {
     for (i = 0; i < NUM_TERM; i++) {
         tasks[INIT]->terminal = i;
         update_screen(i);
-        clear();
         execute_shell();
     }
 
