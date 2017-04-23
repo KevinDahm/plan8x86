@@ -30,6 +30,7 @@ DO_CALL(sigreturn,SYS_SIGRETURN)
 DO_CALL(vidmap_all, SYS_VIDMAP_ALL)
 DO_CALL(ioperm, SYS_IOPERM)
 DO_CALL(thread_create, SYS_THREAD_CREATE)
+DO_CALL(thread_join, SYS_THREAD_JOIN)
 
 
 /* Call the main() function, then halt with its return value. */

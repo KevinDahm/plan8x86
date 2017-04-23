@@ -44,7 +44,7 @@ int32_t sys_halt(uint32_t status) {
         while (tasks[cur_task]->thread_status != 0) {
             if (tasks[cur_task]->thread_status & 1) {
                 tasks[i]->status = TASK_EMPTY;
-                tasks[i]->page_directory[34] = 0;
+                tasks[i]->page_directory[34] = 2;
             }
             tasks[cur_task]->thread_status >>= 1;
             i++;
@@ -476,12 +476,12 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
 
     tasks[task_num]->status = TASK_RUNNING;
     tasks[task_num]->file_descs = tasks[cur_task]->file_descs;
-    tasks[task_num]->page_directory = tasks[cur_task]->page_directory;
+    memcpy(tasks[task_num]->page_directory, tasks[cur_task]->page_directory, DIR_SIZE * 4);
     // Add a page directory entry mapping 136MB virtual to the physical space this task would have taken up.
     // This will be used for the user level stack.
     setup_task_mem(tasks[task_num]->page_directory + 34, task_num);
-    tasks[task_num]->kernel_vid_table = tasks[cur_task]->kernel_vid_table;
-    tasks[task_num]->usr_vid_table = tasks[cur_task]->usr_vid_table;
+    memcpy(tasks[task_num]->usr_vid_table, tasks[cur_task]->usr_vid_table, DIR_SIZE * 4);
+    memcpy(tasks[task_num]->kernel_vid_table, tasks[cur_task]->kernel_vid_table, DIR_SIZE * 4);
     tasks[task_num]->arg_str = NULL;
     tasks[task_num]->terminal = tasks[cur_task]->terminal;
     tasks[task_num]->rtc_flag = false;
@@ -508,7 +508,7 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     *uesp = 0xB8;
 
     uint32_t return_addr = (uint32_t)uesp;
-    uesp -= 4;
+    uesp -= 5;
     *(uint32_t *)uesp = return_addr;
 
     asm volatile("                             \n\
@@ -543,7 +543,7 @@ int32_t sys_thread_join(uint32_t tid) {
 
         reschedule();
     }
-    tasks[tid]->page_directory[34] = 0;
+    tasks[tid]->page_directory[34] = 2;
     return 0;
 }
 

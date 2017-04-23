@@ -10,7 +10,7 @@
 #define MAX_LEVEL      10  /* maximum level number                         */
 
 
-#define BACKQUOTE 96
+#define BACKQUOTE 32
 #define UP 138
 #define DOWN 162
 #define RIGHT 163
@@ -36,8 +36,8 @@ static game_info_t game_info;
 
 static int picked_up_fruit = 0;
 
-int quit_flag = 0;
-int winner= 0;
+volatile int quit_flag = 0;
+volatile int winner= 0;
 volatile int next_dir;
 int play_x, play_y, last_dir, dir;
 int move_cnt = 0;
@@ -550,10 +550,13 @@ int main() {
     int x = 64;
     write(fd, &x, 4);
 
-    uint32_t tid;
-    thread_create(&tid, rtc_thread);
+    uint32_t tid1;
+    thread_create(&tid1, rtc_thread);
+    uint32_t tid2;
+    thread_create(&tid2, keyboard_thread);
 
-    keyboard_thread();
+    thread_join(tid1);
+    thread_join(tid2);
 
     clear_mode_X();
 

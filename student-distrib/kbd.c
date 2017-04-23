@@ -310,6 +310,7 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             i += sizeof(kbd_t);
             buffer_full[TASK_T] = false;
         } else {
+            term_process[TASK_T] = cur_task;
             tasks[cur_task]->status = TASK_SLEEPING;
             reschedule();
         }
