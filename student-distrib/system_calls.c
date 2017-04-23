@@ -33,7 +33,7 @@ int32_t sys_halt(uint32_t status) {
 
     if (tasks[cur_task]->thread_status == 1 && tasks[tasks[cur_task]->parent]->thread_waiting == cur_task) {
         tasks[tasks[cur_task]->parent]->status = TASK_RUNNING;
-        tasks[tasks[cur_task]->parent]->thread_status &= ~(1 << cur_task);
+        CLEAR_THREAD(tasks[cur_task]->parent, cur_task);
         tasks[cur_task]->status = TASK_EMPTY;
         goto sys_halt_return;
     } else if (tasks[cur_task]->thread_status == 1) {
@@ -490,7 +490,7 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     tasks[task_num]->rtc_flag = false;
     tasks[task_num]->parent = cur_task;
     *tid = task_num;
-    tasks[cur_task]->thread_status |= (1 << task_num);
+    SET_THREAD(cur_task, task_num);
     tasks[task_num]->thread_status = 1;
     tasks[task_num]->kernel_esp = (uint32_t)&task_stacks[task_num].stack_start;
 
@@ -500,6 +500,9 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
 
     uint8_t *uesp = (uint8_t *)(MB4 * 35 - 4);
 
+    // Put the following assembly on the user stack:
+    // pushl $0x1, %eax
+    // int $0x80
     *uesp = 0x00; uesp--;
     *uesp = 0x80; uesp--;
     *uesp = 0xCD; uesp--;
@@ -510,6 +513,8 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     *uesp = 0x01; uesp--;
     *uesp = 0xB8;
 
+    // Put a pointer to the assembly on the stack so that
+    // when the thread returns it starts executing the assembly
     uint32_t return_addr = (uint32_t)uesp;
     uesp -= 5;
     *(uint32_t *)uesp = return_addr;
@@ -539,7 +544,7 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
 int32_t sys_thread_join(uint32_t tid) {
     if (tasks[tid]->status == TASK_ZOMBIE) {
         tasks[tid]->status = TASK_EMPTY;
-        tasks[cur_task]->thread_status &= ~(1 << tid);
+        CLEAR_THREAD(cur_task, tid);
     } else {
         tasks[cur_task]->thread_waiting = tid;
         tasks[cur_task]->status = TASK_WAITING_FOR_THREAD;
