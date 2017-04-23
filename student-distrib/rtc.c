@@ -108,10 +108,11 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     *((uint32_t*)buf) = 1 << (16 - (freq & 0xF));
 
     // loop until RTC interrupt
-    do {
-        tasks[cur_task]->rtc_flag = true;
-        asm volatile("hlt");
-    } while (tasks[cur_task]->rtc_flag);
+    tasks[cur_task]->rtc_flag = true;
+
+    while (tasks[cur_task]->rtc_flag) {
+        reschedule();
+    }
 
     return 0;
 }

@@ -14,6 +14,7 @@ extern uint32_t term_process[NUM_TERM];
 
 extern uint32_t active;
 
+extern void reschedule();
 extern void schedule();
 void pit_init();
 

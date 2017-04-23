@@ -60,15 +60,12 @@ void do_machine_check(const struct pt_regs* regs) { handle_exception("machine_ch
 void do_simd_coprocessor_error(const struct pt_regs* regs) { handle_exception("simd_coprocessor_error", regs->eip); }
 
 void do_page_fault(const struct pt_regs* regs, uint32_t error) {
-    /* handle_exception("page_fault", regs->eip); */
-    /* switch_page_directory(0); */
     uint32_t cr2;
     asm volatile("movl %%cr2, %0;"
                  : "=r"(cr2)
                  :);
-    blue_screen();
-    set_cursor(0, 0);
-    printf("Page fault.\n");
+
+    printf("\nPage fault.\n");
     if (error & 0x1) {
         printf("page-protection violation\n");
     } else {
@@ -97,7 +94,11 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
 
     printf("caused by address: 0x%x\n", cr2);
     printf("on EIP: 0x%x\n", regs->eip);
-    hang();
+    if (cur_task == 0) {
+        hang();
+    } else {
+        sys_halt(256);
+    }
 }
 
 /* do_IRQ

@@ -28,6 +28,7 @@ uint32_t halt_status;
  * Side Effects: resets the cur_task's pcb_t
  */
 int32_t sys_halt(uint32_t status) {
+    cli();
     int i;
 
     if (tasks[cur_task]->thread_status == 1 && tasks[tasks[cur_task]->parent]->thread_waiting == cur_task) {
@@ -43,6 +44,7 @@ int32_t sys_halt(uint32_t status) {
         while (tasks[cur_task]->thread_status != 0) {
             if (tasks[cur_task]->thread_status & 1) {
                 tasks[i]->status = TASK_EMPTY;
+                tasks[i]->page_directory[34] = 0;
             }
             tasks[cur_task]->thread_status >>= 1;
             i++;
@@ -85,6 +87,8 @@ sys_halt_return:
     asm volatile("movl %0, %%ebp;" : : "r"(ebp));
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
+
+    asm volatile("movl %0, %%eax; leave; ret;" : : "r"(halt_status));
 
     return halt_status;
 }
@@ -129,10 +133,16 @@ int32_t sys_execute(const uint8_t* command) {
         return -1;
     }
 
+    tasks[task_num] = &task_stacks[task_num].pcb;
+    memset(tasks[task_num], 0, sizeof(pcb_t));
+    tasks[task_num]->kernel_esp = (uint32_t)&task_stacks[task_num].stack_start;
+
     tasks[task_num]->parent = cur_task;
-    tasks[task_num]->thread_status = 0;
-    tasks[task_num]->thread_waiting = 0;
     cur_task = task_num;
+
+    tasks[cur_task]->thread_status = 0;
+    tasks[cur_task]->thread_waiting = 0;
+    tasks[cur_task]->rtc_flag = false;
 
     tasks[cur_task]->page_directory = page_directory_tables[cur_task];
     tasks[cur_task]->kernel_vid_table = page_tables[cur_task][0];
@@ -182,6 +192,7 @@ int32_t sys_execute(const uint8_t* command) {
     // If the file cannot be found error
     if ((fd = sys_open(com_str)) == -1) {
         cur_task = tasks[cur_task]->parent;
+        switch_page_directory(cur_task);
         return -1;
     }
 
@@ -446,6 +457,7 @@ int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
 }
 
 int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
+    cli();
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
     tasks[cur_task]->ebp = ebp;
@@ -462,7 +474,17 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
         return -1;
     }
 
-    memcpy(tasks[task_num], tasks[cur_task], sizeof(pcb_t));
+    tasks[task_num]->status = TASK_RUNNING;
+    tasks[task_num]->file_descs = tasks[cur_task]->file_descs;
+    tasks[task_num]->page_directory = tasks[cur_task]->page_directory;
+    // Add a page directory entry mapping 136MB virtual to the physical space this task would have taken up.
+    // This will be used for the user level stack.
+    setup_task_mem(tasks[task_num]->page_directory + 34, task_num);
+    tasks[task_num]->kernel_vid_table = tasks[cur_task]->kernel_vid_table;
+    tasks[task_num]->usr_vid_table = tasks[cur_task]->usr_vid_table;
+    tasks[task_num]->arg_str = NULL;
+    tasks[task_num]->terminal = tasks[cur_task]->terminal;
+    tasks[task_num]->rtc_flag = false;
     tasks[task_num]->parent = cur_task;
     *tid = task_num;
     tasks[cur_task]->thread_status |= (1 << task_num);
@@ -473,7 +495,7 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     switch_page_directory(cur_task);
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    uint8_t *uesp = (uint8_t *)(TASK_ADDR + MB4 - MB);
+    uint8_t *uesp = (uint8_t *)(MB4 * 35 - 4);
 
     *uesp = 0x00; uesp--;
     *uesp = 0x80; uesp--;
@@ -519,8 +541,9 @@ int32_t sys_thread_join(uint32_t tid) {
         tasks[cur_task]->thread_waiting = tid;
         tasks[cur_task]->status = TASK_WAITING_FOR_THREAD;
 
-        while (tasks[tid]->status != TASK_EMPTY) {}
+        reschedule();
     }
+    tasks[tid]->page_directory[34] = 0;
     return 0;
 }
 
