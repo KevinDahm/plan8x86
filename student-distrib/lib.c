@@ -9,7 +9,7 @@
 
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x8B
+#define ATTRIB 0x8F
 #define BLUE 0x1F
 
 #define TAB_SIZE 4
