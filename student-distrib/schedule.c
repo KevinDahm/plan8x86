@@ -6,6 +6,7 @@
 #include "lib.h"
 #include "x86_desc.h"
 #include "i8259.h"
+#include "signals.h"
 
 uint32_t term_process[NUM_TERM] = {0, 0, 0};
 
@@ -66,16 +67,20 @@ void schedule() {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    ebp = tasks[cur_task]->ebp;
-    asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
-
-    if (dont_send_eoi) {
-        dont_send_eoi = false;
+    if (tasks[cur_task]->pending_signals != 0) {
+        handle_signals();
     } else {
-        send_eoi(0);
+        ebp = tasks[cur_task]->ebp;
+        asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
+
+        if (dont_send_eoi) {
+            dont_send_eoi = false;
+        } else {
+            send_eoi(0);
+        }
+        // GCC compiles this function with no leave call. Thus the ebp becomes useless.
+        asm volatile("leave; ret;" : :);
     }
-    // GCC compiles this function with no leave call. Thus the ebp becomes useless.
-    asm volatile("leave; ret;" : :);
 }
 
 void pit_init(){

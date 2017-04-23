@@ -43,6 +43,23 @@ typedef struct file_desc {
 #define TASK_ZOMBIE 4
 #define TASK_WAITING_FOR_THREAD 5
 
+enum signals {
+    DIV_ZERO = 0,
+    SEGFAULT,
+    INTERRUPT,
+    ALARM,
+    USER1,
+    NUM_SIGNALS
+};
+
+#define SET_SIGNAL(task, signal) do {tasks[task]->pending_signals |= (1 << signal);} while(0)
+#define CLEAR_SIGNAL(task, signal) do {tasks[task]->pending_signals &= ~(1 << signal);} while(0)
+#define SIGNAL_SET(task, signal) ((tasks[task]->pending_signals & (1 << signal)) != 0)
+
+// signal_handlers is an array of NUM_TASKS of arrays of NUM_SIGNALS
+// of function pointers to functions taking int32_t and returning void
+void (*signal_handlers[NUM_TASKS][NUM_SIGNALS])(int32_t);
+
 #define INIT 0
 
 file_desc_t file_desc_arrays[NUM_TASKS][FILE_DESCS_LENGTH];
@@ -57,6 +74,7 @@ typedef struct {
     uint32_t kernel_esp;
     uint8_t* arg_str;
     uint32_t terminal;
+    uint32_t pending_signals;
     // If thread_status is 0 this process is a regular process with no threads
     // If thread_status is 1 this process is a thread
     // If thread_status is >1 this process owns threads where each bit set in thread_status
