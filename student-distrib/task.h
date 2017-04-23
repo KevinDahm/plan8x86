@@ -64,6 +64,9 @@ void (*signal_handlers[NUM_TASKS][NUM_SIGNALS])(int32_t);
 
 file_desc_t file_desc_arrays[NUM_TASKS][FILE_DESCS_LENGTH];
 
+#define CLEAR_THREAD(task, tid) do {tasks[task]->thread_status &= ~(1 << tid);} while(0)
+#define SET_THREAD(task, tid) do {tasks[task]->thread_status |= (1 << tid);} while(0)
+
 typedef struct {
     int32_t status;
     file_desc_t *file_descs;

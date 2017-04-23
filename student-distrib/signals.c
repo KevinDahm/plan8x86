@@ -17,7 +17,7 @@ void handle_default_signal(int32_t signal) {
 }
 
 void handle_signals() {
-    int8_t signal;
+    uint8_t signal;
     for (signal = 0; signal < NUM_SIGNALS; signal++) {
         if (SIGNAL_SET(cur_task, signal)) {
             if (signal_handlers[cur_task][signal] == NULL) {
