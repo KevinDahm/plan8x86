@@ -100,6 +100,9 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
  * Side Effects: Fills the tasks array.
  */
 void create_init() {
+
+    memset(signal_handlers, 0, sizeof(signal_handlers));
+
     tasks[INIT] = &task_stacks[INIT].pcb;
     memset(tasks[INIT], 0, sizeof(pcb_t));
     tasks[INIT]->kernel_esp = (uint32_t)&task_stacks[INIT].stack_start;

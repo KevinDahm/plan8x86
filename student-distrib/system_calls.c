@@ -143,6 +143,9 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->thread_status = 0;
     tasks[cur_task]->thread_waiting = 0;
     tasks[cur_task]->rtc_flag = false;
+    tasks[cur_task]->pending_signals = 0;
+
+    memset(signal_handlers[cur_task], 0, sizeof(signal_handlers[cur_task]));
 
     tasks[cur_task]->page_directory = page_directory_tables[cur_task];
     tasks[cur_task]->kernel_vid_table = page_tables[cur_task][0];

@@ -19,7 +19,7 @@ static kbd_t kbd_buffer[NUM_TERM][KBD_BUFFER_SIZE];
 // Current kbd state
 kbd_t kbd_state;
 
-#define DVORAK 1
+#define DVORAK 0
 
 #if DVORAK
 int8_t ascii_lookup[][16] = {
@@ -247,6 +247,11 @@ void _kbd_do_irq(int dev_id) {
                 update_screen(f);
                 break;
             }
+        }
+
+        if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
+            SET_SIGNAL(term_process[active], INTERRUPT);
+            reschedule();
         }
 
         // Write key to buffer
