@@ -28,15 +28,40 @@ uint32_t halt_status;
  * Side Effects: resets the cur_task's pcb_t
  */
 int32_t sys_halt(uint32_t status) {
-    tasks[cur_task]->kernel_esp = (uint32_t)&task_stacks[cur_task].stack_start;
     int i;
+
+    if (tasks[cur_task]->thread_status == 1 && tasks[tasks[cur_task]->parent]->thread_waiting == cur_task) {
+        tasks[tasks[cur_task]->parent]->status = TASK_RUNNING;
+        tasks[tasks[cur_task]->parent]->thread_status &= ~(1 << cur_task);
+        tasks[cur_task]->status = TASK_EMPTY;
+        goto sys_halt_return;
+    } else if (tasks[cur_task]->thread_status == 1) {
+        tasks[cur_task]->status = TASK_ZOMBIE;
+        goto sys_halt_return;
+    } else if (tasks[cur_task]->thread_status > 1) {
+        i = 0;
+        while (tasks[cur_task]->thread_status != 0) {
+            if (tasks[cur_task]->thread_status & 1) {
+                tasks[i]->status = TASK_EMPTY;
+            }
+            tasks[cur_task]->thread_status >>= 1;
+            i++;
+        }
+        goto sys_halt_cleanup_files;
+    } else {
+        tasks[cur_task]->status = TASK_EMPTY;
+        goto sys_halt_cleanup_files;
+    }
+
+sys_halt_cleanup_files:
     for (i = 0; i < FILE_DESCS_LENGTH; i++) {
         if (tasks[cur_task]->file_descs[i].flags != FD_CLEAR) {
             sys_close(i);
         }
     }
 
-    tasks[cur_task]->status = TASK_EMPTY;
+sys_halt_return:
+    tasks[cur_task]->kernel_esp = (uint32_t)&task_stacks[cur_task].stack_start;
     uint32_t term = tasks[cur_task]->terminal;
 
     cur_task = tasks[cur_task]->parent;
@@ -105,6 +130,8 @@ int32_t sys_execute(const uint8_t* command) {
     }
 
     tasks[task_num]->parent = cur_task;
+    tasks[task_num]->thread_status = 0;
+    tasks[task_num]->thread_waiting = 0;
     cur_task = task_num;
 
     tasks[cur_task]->page_directory = page_directory_tables[cur_task];
@@ -137,6 +164,8 @@ int32_t sys_execute(const uint8_t* command) {
     }
 
     switch_page_directory(cur_task);
+
+    tasks[cur_task]->file_descs = file_desc_arrays[cur_task];
 
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
@@ -417,6 +446,11 @@ int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
 }
 
 int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
+    uint32_t ebp;
+    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+    tasks[cur_task]->ebp = ebp;
+    tasks[cur_task]->kernel_esp = ebp-4;
+
     uint8_t task_num;
     for (task_num = 1; task_num < NUM_TASKS; task_num++) {
         if (tasks[task_num]->status == TASK_EMPTY) {
@@ -430,16 +464,30 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
 
     memcpy(tasks[task_num], tasks[cur_task], sizeof(pcb_t));
     tasks[task_num]->parent = cur_task;
+    *tid = task_num;
+    tasks[cur_task]->thread_status |= (1 << task_num);
+    tasks[task_num]->thread_status = 1;
     tasks[task_num]->kernel_esp = (uint32_t)&task_stacks[task_num].stack_start;
-    uint32_t ebp;
-    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
-    tasks[cur_task]->ebp = ebp;
 
     cur_task = task_num;
     switch_page_directory(cur_task);
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    uint32_t user_stack_addr = TASK_ADDR + MB4 - MB;
+    uint8_t *uesp = (uint8_t *)(TASK_ADDR + MB4 - MB);
+
+    *uesp = 0x00; uesp--;
+    *uesp = 0x80; uesp--;
+    *uesp = 0xCD; uesp--;
+    *uesp = 0x00; uesp--;
+
+    *uesp = 0x00; uesp--;
+    *uesp = 0x00; uesp--;
+    *uesp = 0x01; uesp--;
+    *uesp = 0xB8;
+
+    uint32_t return_addr = (uint32_t)uesp;
+    uesp -= 4;
+    *(uint32_t *)uesp = return_addr;
 
     asm volatile("                             \n\
     movw $" str(USER_DS) ", %%ax               \n\
@@ -459,7 +507,20 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     iret                                       \n\
     "
                  :
-                 : "b"(thread_start), "c"(user_stack_addr));
+                 : "b"(thread_start), "c"(uesp));
+    return 0;
+}
+
+int32_t sys_thread_join(uint32_t tid) {
+    if (tasks[tid]->status == TASK_ZOMBIE) {
+        tasks[tid]->status = TASK_EMPTY;
+        tasks[cur_task]->thread_status &= ~(1 << tid);
+    } else {
+        tasks[cur_task]->thread_waiting = tid;
+        tasks[cur_task]->status = TASK_WAITING_FOR_THREAD;
+
+        while (tasks[tid]->status != TASK_EMPTY) {}
+    }
     return 0;
 }
 

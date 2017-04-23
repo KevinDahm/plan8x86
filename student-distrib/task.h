@@ -40,22 +40,30 @@ typedef struct file_desc {
 #define TASK_EMPTY 0
 #define TASK_RUNNING 1
 #define TASK_SLEEPING 2
+#define TASK_ZOMBIE 4
+#define TASK_WAITING_FOR_THREAD 5
 
 #define INIT 0
 
-
+file_desc_t file_desc_arrays[NUM_TASKS][FILE_DESCS_LENGTH];
 
 typedef struct {
     int32_t status;
-    file_desc_t file_descs[FILE_DESCS_LENGTH];
+    file_desc_t *file_descs;
     uint32_t *page_directory;
     uint32_t *kernel_vid_table;
     uint32_t *usr_vid_table;
     uint32_t ebp;
-    uint8_t parent;
     uint32_t kernel_esp;
     uint8_t* arg_str;
     uint32_t terminal;
+    // If thread_status is 0 this process is a regular process with no threads
+    // If thread_status is 1 this process is a thread
+    // If thread_status is >1 this process owns threads where each bit set in thread_status
+    // corresponds to the index in tasks of the owned thread.
+    uint32_t thread_status;
+    uint8_t thread_waiting;
+    uint8_t parent;
     bool rtc_flag;
 } pcb_t;
 

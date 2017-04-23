@@ -78,7 +78,7 @@ system_call:
   movl $0, %esi
   cmp %eax, %esi
   je sys_call_err
-  movl $15, %esi
+  movl $16, %esi
   cmp %esi, %eax
   ja sys_call_err
   pushl %edx
