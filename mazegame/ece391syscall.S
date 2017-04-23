@@ -17,19 +17,20 @@ name:   PUSHL	%EBX          ;\
 	RET
 
 /* the system call library wrappers */
-DO_CALL(ece391_halt,SYS_HALT)
-DO_CALL(ece391_execute,SYS_EXECUTE)
-DO_CALL(ece391_read,SYS_READ)
-DO_CALL(ece391_write,SYS_WRITE)
-DO_CALL(ece391_open,SYS_OPEN)
-DO_CALL(ece391_close,SYS_CLOSE)
-DO_CALL(ece391_getargs,SYS_GETARGS)
-DO_CALL(ece391_vidmap,SYS_VIDMAP)
-DO_CALL(ece391_set_handler,SYS_SET_HANDLER)
-DO_CALL(ece391_sigreturn,SYS_SIGRETURN)
-DO_CALL(ece391_vidmap_all, SYS_VIDMAP_ALL)
-DO_CALL(ece391_ioperm, SYS_IOPERM)
-DO_CALL(ece391_thread_create, SYS_THREAD_CREATE)
+DO_CALL(halt,SYS_HALT)
+DO_CALL(execute,SYS_EXECUTE)
+DO_CALL(read,SYS_READ)
+DO_CALL(write,SYS_WRITE)
+DO_CALL(open,SYS_OPEN)
+DO_CALL(close,SYS_CLOSE)
+DO_CALL(getargs,SYS_GETARGS)
+DO_CALL(vidmap,SYS_VIDMAP)
+DO_CALL(set_handler,SYS_SET_HANDLER)
+DO_CALL(sigreturn,SYS_SIGRETURN)
+DO_CALL(vidmap_all, SYS_VIDMAP_ALL)
+DO_CALL(ioperm, SYS_IOPERM)
+DO_CALL(thread_create, SYS_THREAD_CREATE)
+DO_CALL(thread_join, SYS_THREAD_JOIN)
 
 
 /* Call the main() function, then halt with its return value. */
@@ -40,5 +41,5 @@ _start:
     PUSHL   $0
     PUSHL   $0
 	PUSHL	%EAX
-	CALL	ece391_halt
+	CALL	halt
 

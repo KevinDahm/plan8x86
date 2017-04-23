@@ -15,6 +15,27 @@ bool interupt_preempt = false;
 
 static int cur_p = 0;
 
+#define PIT_PORT_COMMAND 0x43
+#define PIT_PORT_CHANNEL_0 0x40
+#define LOW_FREQ_BYTE 0
+// ~15ms time slices
+#define HIGH_FREQ_BYTE 75
+
+static bool dont_send_eoi = false;
+
+void reschedule() {
+    cli();
+
+    outb(LOW_FREQ_BYTE, PIT_PORT_CHANNEL_0);
+    outb(HIGH_FREQ_BYTE, PIT_PORT_CHANNEL_0);
+
+    sti();
+
+    dont_send_eoi = true;
+
+    asm volatile("int $0x20;");
+}
+
 void schedule() {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
@@ -48,17 +69,20 @@ void schedule() {
     ebp = tasks[cur_task]->ebp;
     asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
 
-    send_eoi(0);
+    if (dont_send_eoi) {
+        dont_send_eoi = false;
+    } else {
+        send_eoi(0);
+    }
     // GCC compiles this function with no leave call. Thus the ebp becomes useless.
     asm volatile("leave; ret;" : :);
 }
 
 void pit_init(){
     // 00110100b - Magic (sets the pit up for regular interrupts on IRQ0)
-    outb(0x34, 0x43);
-    outb(0, 0x40);
-    // ~15ms time slices
-    outb(75, 0x40);
+    outb(0x34, PIT_PORT_COMMAND);
+    outb(LOW_FREQ_BYTE, PIT_PORT_CHANNEL_0);
+    outb(HIGH_FREQ_BYTE, PIT_PORT_CHANNEL_0);
 }
 
 

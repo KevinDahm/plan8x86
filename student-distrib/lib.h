@@ -8,6 +8,7 @@
 #include "types.h"
 #include "schedule.h"
 
+void video_init();
 extern int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
 void removec();

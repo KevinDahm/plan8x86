@@ -9,7 +9,7 @@
 
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x7
+#define ATTRIB 0x8B
 #define BLUE 0x1F
 
 #define TAB_SIZE 4
@@ -17,6 +17,16 @@
 static int32_t color[NUM_TERM] = {ATTRIB, ATTRIB, ATTRIB};
 static int32_t term_x[NUM_TERM];
 static int32_t term_y[NUM_TERM];
+
+void video_init() {
+    int i, j;
+    for (i = 0; i < NUM_TERM; i++) {
+        for (j = 1; j < NUM_COLS * NUM_ROWS; j++) {
+            *(terminal_video[i] + (j << 1)) = ' ';
+            *(terminal_video[i] + (j << 1) + 1) = color[i];
+        }
+    }
+}
 
 uint8_t *get_video_mem() {
     if (cur_task == 0) {

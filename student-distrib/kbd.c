@@ -19,7 +19,7 @@ static kbd_t kbd_buffer[NUM_TERM][KBD_BUFFER_SIZE];
 // Current kbd state
 kbd_t kbd_state;
 
-#define DVORAK 0
+#define DVORAK 1
 
 #if DVORAK
 int8_t ascii_lookup[][16] = {
@@ -310,7 +310,9 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             i += sizeof(kbd_t);
             buffer_full[TASK_T] = false;
         } else {
+            term_process[TASK_T] = cur_task;
             tasks[cur_task]->status = TASK_SLEEPING;
+            reschedule();
         }
     }
     tasks[cur_task]->status = TASK_RUNNING;
