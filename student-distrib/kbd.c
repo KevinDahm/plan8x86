@@ -249,11 +249,6 @@ void _kbd_do_irq(int dev_id) {
             }
         }
 
-        if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
-            SET_SIGNAL(term_process[active], INTERRUPT);
-            reschedule();
-        }
-
         // Write key to buffer
         kbd_buffer[active][write_index[active]] = kbd_state;
         // Increment write_index

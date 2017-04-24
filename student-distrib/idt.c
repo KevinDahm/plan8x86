@@ -35,8 +35,7 @@ void handle_exception(int8_t *exc_str, uint32_t err_val) {
     } else {
         printf("\n%s ", exc_str);
         printf("0x%#x\n", err_val);
-        SET_SIGNAL(cur_task, SEGFAULT);
-        reschedule();
+        sys_halt(256);
     }
 }
 
@@ -70,8 +69,7 @@ void do_divide_error(const struct pt_regs* regs) {
     } else {
         printf("\ndivide error ");
         printf("0x%#x\n", regs->eip);
-        SET_SIGNAL(cur_task, DIV_ZERO);
-        reschedule();
+        sys_halt(256);
     }
 }
 void do_page_fault(const struct pt_regs* regs, uint32_t error) {
@@ -112,8 +110,7 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
     if (cur_task == 0) {
         hang();
     } else {
-        SET_SIGNAL(cur_task, SEGFAULT);
-        reschedule();
+        sys_halt(256);
     }
 }
 
