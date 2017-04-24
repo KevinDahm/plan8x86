@@ -252,6 +252,8 @@ void _kbd_do_irq(int dev_id) {
         if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
             SET_SIGNAL(term_process[active], INTERRUPT);
             send_eoi(1);
+            e0_waiting = false;
+            kbd_ready = true;
             reschedule();
         }
 

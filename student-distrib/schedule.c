@@ -22,8 +22,6 @@ static int cur_p = 0;
 // ~15ms time slices
 #define HIGH_FREQ_BYTE 75
 
-static bool dont_send_eoi = false;
-
 void reschedule() {
     cli();
 
@@ -31,8 +29,6 @@ void reschedule() {
     outb(HIGH_FREQ_BYTE, PIT_PORT_CHANNEL_0);
 
     sti();
-
-    dont_send_eoi = true;
 
     asm volatile("int $0x20;");
 }
@@ -76,18 +72,14 @@ void schedule(hw_context_t *hw_context) {
 
     if (tasks[cur_task]->pending_signals != 0) {
         handle_signals(hw_context);
-    } else {
-        ebp = tasks[cur_task]->ebp;
-        asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
-
-        if (dont_send_eoi) {
-            dont_send_eoi = false;
-        } else {
-            send_eoi(0);
-        }
-        // GCC compiles this function with no leave call. Thus the ebp becomes useless.
-        asm volatile("leave; ret;" : :);
     }
+
+    ebp = tasks[cur_task]->ebp;
+    asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
+
+    send_eoi(0);
+    // GCC compiles this function with no leave call. Thus the ebp becomes useless.
+    asm volatile("leave; ret;" : :);
 }
 
 void pit_init(){

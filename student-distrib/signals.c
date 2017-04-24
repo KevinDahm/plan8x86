@@ -21,8 +21,8 @@ void handle_default_signal(int32_t signal) {
 
 void handle_signals(hw_context_t *hw_context) {
     uint8_t signal;
-    for (signal = 0; signal < NUM_SIGNALS; signal++) {
-        if (tasks[cur_task]->signal_mask == false) {
+    if (tasks[cur_task]->signal_mask == false) {
+        for (signal = 0; signal < NUM_SIGNALS; signal++) {
             if (SIGNAL_SET(cur_task, signal)) {
                 if (signal_handlers[cur_task][signal] == NULL) {
                     handle_default_signal(signal);
@@ -76,8 +76,6 @@ void handle_signals(hw_context_t *hw_context) {
                                  : "b"(signal_handlers[cur_task][signal]), "c"(uesp));
                 }
             }
-        } else {
-            reschedule();
         }
     }
 }
