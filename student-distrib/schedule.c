@@ -37,10 +37,17 @@ void reschedule() {
     asm volatile("int $0x20;");
 }
 
-void schedule() {
+void backup_uesp(hw_context_t *hw_context) {
+    if (hw_context->iret_context.eip >= TASK_ADDR) {
+        tasks[cur_task]->user_esp = hw_context->iret_context.esp;
+    }
+}
+
+void schedule(hw_context_t *hw_context) {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
     tasks[cur_task]->ebp = ebp;
+    tasks[cur_task]->kernel_esp = ebp - 4;
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -68,7 +75,7 @@ void schedule() {
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
     if (tasks[cur_task]->pending_signals != 0) {
-        handle_signals();
+        handle_signals(hw_context);
     } else {
         ebp = tasks[cur_task]->ebp;
         asm volatile("movl %0, %%ebp \n" : : "r"(ebp));

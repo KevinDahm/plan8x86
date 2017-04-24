@@ -10,13 +10,6 @@
 #include "task.h"
 #include "schedule.h"
 
-// This is black magic. Be careful. Don't touch this.
-// This allows me to insert constants into to strings
-// See the end of sys_execute.
-#define st(a) #a
-#define str(a) st(a)
-
-
 bool backup_init_ebp = true;
 
 
@@ -226,7 +219,7 @@ int32_t sys_execute(const uint8_t* command) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    uint32_t user_stack_addr = TASK_ADDR + MB4;
+    tasks[cur_task]->user_esp = TASK_ADDR + MB4;
 
     // Setup an iret context on the stack with user CS and DS,
     // an EIP of start and an ESP of user_stack_addr
@@ -250,7 +243,7 @@ int32_t sys_execute(const uint8_t* command) {
     iret                                       \n\
     "
                  :
-                 : "b"(start), "c"(user_stack_addr));
+                 : "b"(start), "c"(tasks[cur_task]->user_esp));
     return 0;
 }
 
@@ -412,11 +405,23 @@ int32_t sys_vidmap(uint8_t** screen_start) {
 }
 
 int32_t sys_set_handler(int32_t signum, void* handler_address) {
-    return -1;
+    if ((uint32_t)handler_address < TASK_ADDR || (uint32_t)handler_address >= (TASK_ADDR + MB4)) {
+        return -1;
+    }
+    signal_handlers[cur_task][signum] = handler_address;
+    return 0;
 }
 
 int32_t sys_sigreturn(void) {
-    return -1;
+    uint32_t ebp;
+    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+
+    tasks[cur_task]->signal_mask = false;
+
+    hw_context_t *hw_context = (hw_context_t *)(ebp + 20);
+
+    memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t));
+    return hw_context->eax;
 }
 
 int32_t sys_vidmap_all(uint8_t** screen_start) {
@@ -454,7 +459,7 @@ int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
     // TODO: Use the TSS to avoid giving permisions for all ports
     uint32_t *ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
-    ebp[17] |= 0x3000;
+    ebp[19] |= 0x3000;
 
     return 0;
 }
@@ -518,6 +523,8 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     uint32_t return_addr = (uint32_t)uesp;
     uesp -= 5;
     *(uint32_t *)uesp = return_addr;
+
+    tasks[cur_task]->user_esp = (uint32_t)uesp;
 
     asm volatile("                             \n\
     movw $" str(USER_DS) ", %%ax               \n\
