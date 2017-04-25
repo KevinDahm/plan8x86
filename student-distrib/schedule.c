@@ -43,7 +43,6 @@ void schedule(hw_context_t *hw_context) {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
     tasks[cur_task]->ebp = ebp;
-    tasks[cur_task]->kernel_esp = ebp - 4;
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -71,7 +70,7 @@ void schedule(hw_context_t *hw_context) {
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
     ebp = tasks[cur_task]->ebp;
-    asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
+    asm volatile("movl %0, %%ebp;" : : "r"(ebp));
 
     send_eoi(0);
     // GCC compiles this function with no leave call. Thus the ebp becomes useless.

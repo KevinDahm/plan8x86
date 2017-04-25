@@ -11,7 +11,6 @@ void check_for_signals(hw_context_t *hw_context) {
 }
 
 void handle_default_signal(int32_t signal) {
-    CLEAR_SIGNAL(cur_task, signal);
     switch (signal) {
     case DIV_ZERO:
     case SEGFAULT:
@@ -29,11 +28,11 @@ void handle_signals(hw_context_t *hw_context) {
     if (tasks[cur_task]->signal_mask == false) {
         for (signal = 0; signal < NUM_SIGNALS; signal++) {
             if (SIGNAL_SET(cur_task, signal)) {
+                CLEAR_SIGNAL(cur_task, signal);
                 if (signal_handlers[cur_task][signal] == NULL) {
                     handle_default_signal(signal);
                 } else {
                     tasks[cur_task]->signal_mask = true;
-                    CLEAR_SIGNAL(cur_task, signal);
                     uint8_t *uesp = (uint8_t *)tasks[cur_task]->user_esp - 4;
                     // Put the following assembly on the user stack:
                     // pushl $0xA, %eax

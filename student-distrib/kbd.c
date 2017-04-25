@@ -249,22 +249,21 @@ void _kbd_do_irq(int dev_id) {
             }
         }
 
-        if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
-            SET_SIGNAL(term_process[active], INTERRUPT);
-        }
-
-        // Write key to buffer
-        kbd_buffer[active][write_index[active]] = kbd_state;
-        // Increment write_index
-        write_index[active] = (write_index[active] + 1)%KBD_BUFFER_SIZE;
-
+        tasks[term_process[active]]->status = TASK_RUNNING;
         interupt_preempt = true;
 
-        tasks[term_process[active]]->status = TASK_RUNNING;
+        if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
+            SET_SIGNAL(term_process[active], INTERRUPT);
+        } else {
+            // Write key to buffer
+            kbd_buffer[active][write_index[active]] = kbd_state;
+            // Increment write_index
+            write_index[active] = (write_index[active] + 1)%KBD_BUFFER_SIZE;
 
-        // If buffer full, disable writing
-        if (write_index[active] == read_index[active])
-            buffer_full[active] = true;
+            // If buffer full, disable writing
+            if (write_index[active] == read_index[active])
+                buffer_full[active] = true;
+        }
     }
 
     e0_waiting = false;
