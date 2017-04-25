@@ -1,9 +1,14 @@
 #include "signals.h"
 #include "task.h"
 #include "system_calls.h"
-#include "schedule.h"
 #include "lib.h"
 #include "x86_desc.h"
+
+void check_for_signals(hw_context_t *hw_context) {
+    if (tasks[cur_task]->pending_signals != 0) {
+        handle_signals(hw_context);
+    }
+}
 
 void handle_default_signal(int32_t signal) {
     CLEAR_SIGNAL(cur_task, signal);

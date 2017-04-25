@@ -70,10 +70,6 @@ void schedule(hw_context_t *hw_context) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    if (tasks[cur_task]->pending_signals != 0) {
-        handle_signals(hw_context);
-    }
-
     ebp = tasks[cur_task]->ebp;
     asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
 

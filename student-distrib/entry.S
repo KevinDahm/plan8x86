@@ -65,6 +65,9 @@ common_interupt:
   popl %eax
   movl %esp, %ecx
   call do_IRQ
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
   addl $8, %esp
   iret
@@ -88,6 +91,9 @@ common_exception:
   addl $4, (%esp)
   call *%eax
   addl $8, %esp
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
   addl $8, %esp
   iret
@@ -119,6 +125,9 @@ system_call:
   call *system_calls_jumptable(, %eax, 4)
   addl $12, %esp
   movl %eax, 24(%esp) # Kludge to make sure the return value gets out
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
   addl $8, %esp
   iret

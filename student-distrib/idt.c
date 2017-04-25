@@ -36,7 +36,6 @@ void handle_exception(int8_t *exc_str, uint32_t err_val) {
         printf("\n%s ", exc_str);
         printf("0x%#x\n", err_val);
         SET_SIGNAL(cur_task, SEGFAULT);
-        reschedule();
     }
 }
 
@@ -71,7 +70,6 @@ void do_divide_error(hw_context_t* hw_context) {
         printf("\ndivide error ");
         printf("0x%#x\n", hw_context->iret_context.eip);
         SET_SIGNAL(cur_task, DIV_ZERO);
-        reschedule();
     }
 }
 void do_page_fault(hw_context_t* hw_context, uint32_t error) {
@@ -113,7 +111,6 @@ void do_page_fault(hw_context_t* hw_context, uint32_t error) {
         hang();
     } else {
         SET_SIGNAL(cur_task, SEGFAULT);
-        reschedule();
     }
 }
 
