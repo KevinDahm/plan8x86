@@ -5,8 +5,12 @@
 #include "x86_desc.h"
 
 void check_for_signals(hw_context_t *hw_context) {
-    if (tasks[cur_task]->pending_signals != 0) {
-        handle_signals(hw_context);
+    uint32_t task;
+    for (task = 1; task < NUM_TASKS; task++) {
+        if (tasks[task]->pending_signals != 0) {
+            cur_task = task;
+            handle_signals(hw_context, task);
+        }
     }
 }
 
@@ -23,17 +27,17 @@ void handle_default_signal(int32_t signal) {
     }
 }
 
-void handle_signals(hw_context_t *hw_context) {
+void handle_signals(hw_context_t *hw_context, uint32_t task) {
     uint8_t signal;
-    if (tasks[cur_task]->signal_mask == false) {
+    if (tasks[task]->signal_mask == false) {
         for (signal = 0; signal < NUM_SIGNALS; signal++) {
-            if (SIGNAL_SET(cur_task, signal)) {
-                CLEAR_SIGNAL(cur_task, signal);
-                if (signal_handlers[cur_task][signal] == NULL) {
+            if (SIGNAL_SET(task, signal)) {
+                CLEAR_SIGNAL(task, signal);
+                if (signal_handlers[task][signal] == NULL) {
                     handle_default_signal(signal);
                 } else {
-                    tasks[cur_task]->signal_mask = true;
-                    uint8_t *uesp = (uint8_t *)tasks[cur_task]->user_esp - 4;
+                    tasks[task]->signal_mask = true;
+                    uint8_t *uesp = (uint8_t *)tasks[task]->user_esp - 4;
                     // Put the following assembly on the user stack:
                     // pushl $0xA, %eax
                     // int $0x80
@@ -52,7 +56,7 @@ void handle_signals(hw_context_t *hw_context) {
 
                     uesp -= sizeof(hw_context_t);
                     memcpy(uesp, hw_context, sizeof(hw_context_t));
-                    tasks[cur_task]->sig_hw_context = (hw_context_t *)uesp;
+                    tasks[task]->sig_hw_context = (hw_context_t *)uesp;
 
                     uesp -= 4;
                     *(uint32_t *)uesp = signal;
@@ -77,7 +81,7 @@ void handle_signals(hw_context_t *hw_context) {
                     iret                                       \n\
                     "
                                  :
-                                 : "b"(signal_handlers[cur_task][signal]), "c"(uesp));
+                                 : "b"(signal_handlers[task][signal]), "c"(uesp));
                 }
             }
         }

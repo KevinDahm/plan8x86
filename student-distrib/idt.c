@@ -121,12 +121,11 @@ void do_page_fault(hw_context_t* hw_context, uint32_t error) {
  * Side Effects: Calls every handler in irq_descs[irq]
  */
 __attribute__((fastcall)) void do_IRQ(hw_context_t* hw_context) {
-    // TODO: Make this support threading and preempt_count. See UTLK page 213
     int irq = ~(hw_context->irq_exc);
+    send_eoi(irq);
     irqaction *irq_p = irq_desc[irq];
     while (irq_p) {
         (*irq_p->handle)(irq_p->dev_id);
         irq_p = irq_p->next;
     }
-    send_eoi(irq);
 }

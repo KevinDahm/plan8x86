@@ -6,6 +6,6 @@
 
 void check_for_signals(hw_context_t *hw_context);
 void handle_default_signal(int32_t signal);
-void handle_signals(hw_context_t *hw_context);
+void handle_signals(hw_context_t *hw_context, uint32_t task);
 
 #endif
