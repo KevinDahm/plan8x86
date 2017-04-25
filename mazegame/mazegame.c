@@ -69,6 +69,63 @@ int move_cnt = 0;
 int fd;
 unsigned long data;
 
+static void set_player_color(int init){
+    /*Cycle player color*/
+
+    int col = init ? 0 : (game_info.player_color + 1)%MAX_LEVEL;
+    /*Set player color*/
+    set_palette_color(PLAYER_CENTER_COLOR, palette_colors[col]);
+    game_info.player_color = col;
+}
+/*
+ *  update_status_bar
+ *   DESCRIPTION: Update the status bar to reflect game state
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Writes to VGA memory
+ */
+static void update_status_bar(){
+    /*Get game state*/
+    int fruit = game_info.fruits;
+    int time = get_time() - game_info.start;
+    int lev = game_info.number;
+    /*Form appropriate string*/
+    time %= 3600;
+    char str[] = {
+        'L', 'e', 'v', 'e', 'l', ' ', lev + 0x30,
+        ' ', ' ', ' ', fruit + 0x30, ' ',
+        'F', 'r', 'u', 'i', 't', 's', ' ', ' ', ' ',
+        time/600+0x30, (time/60)%10+0x30, ':',
+        (time%60)/10+0x30, time%10+0x30, 0
+    };
+
+    /* char s = time + 0x30; */
+    show_status_bar(str, STATUS_STR_LENGTH);
+}
+/*
+ *  draw_fruit_text
+ *   DESCRIPTION: Update the status bar to reflect game state
+ *   INPUTS: pos_x, pos_y -- Location of player for centering the text
+ *           need_undraw -- Boolean to force function execution regardless of time
+ *   OUTPUTS: 1 for successful write, 0 for not written
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Writes to the build buffer
+ */
+static int draw_fruit_text(int pos_x, int pos_y, int need_undraw){
+    /*Check if text should be drawn*/
+    if((!need_undraw && (get_time() - game_info.fruit_text) > 3) || game_info.last_fruit == 0){
+        return 0;
+    }
+    /*Get string to be drawn*/
+    char* str = fruit_strings[game_info.last_fruit-1];
+    int length = strlen((uint8_t*)str);
+    /*Draw the string*/
+    draw_text(pos_x - (length/2-1) * FONT_WIDTH, pos_y-FONT_HEIGHT, str, length);
+    return 1;
+}
+
+
 /*
  * move_up
  *   DESCRIPTION: Move the player up one pixel (assumed to be a legal move)
@@ -522,13 +579,21 @@ static void keyboard_thread()
         }
     }
 
+    close(kbd_fd);
+
     return;
+}
+
+void exit(int signum) {
+    quit_flag = 1;
 }
 
 int main() {
     if (set_mode_X(fill_horiz_buffer, fill_vert_buffer) == -1) {
         return 1;
     }
+
+    set_handler(INTERRUPT, exit);
 
     fd = open((uint8_t *)"rtc");
     int x = 64;
@@ -547,59 +612,3 @@ int main() {
     return 0;
 }
 
-static void set_player_color(int init){
-    /*Cycle player color*/
-
-    int col = init ? 0 : (game_info.player_color + 1)%MAX_LEVEL;
-    /*Set player color*/
-    set_palette_color(PLAYER_CENTER_COLOR, palette_colors[col]);
-    game_info.player_color = col;
-}
-/*
- *  update_status_bar
- *   DESCRIPTION: Update the status bar to reflect game state
- *   INPUTS: none
- *   OUTPUTS: none
- *   RETURN VALUE: none
- *   SIDE EFFECTS: Writes to VGA memory
- */
-static void update_status_bar(){
-    /*Get game state*/
-    int fruit = game_info.fruits;
-    int time = get_time() - game_info.start;
-    int lev = game_info.number;
-    /*Form appropriate string*/
-    int length = STATUS_STR_LENGTH;
-    time %= 3600;
-    char str[] = {
-        'L', 'e', 'v', 'e', 'l', ' ', lev + 0x30,
-        ' ', ' ', ' ', fruit + 0x30, ' ',
-        'F', 'r', 'u', 'i', 't', 's', ' ', ' ', ' ',
-        time/600+0x30, (time/60)%10+0x30, ':',
-        (time%60)/10+0x30, time%10+0x30, 0
-    };
-
-    /* char s = time + 0x30; */
-    show_status_bar(str, STATUS_STR_LENGTH);
-}
-/*
- *  draw_fruit_text
- *   DESCRIPTION: Update the status bar to reflect game state
- *   INPUTS: pos_x, pos_y -- Location of player for centering the text
- *           need_undraw -- Boolean to force function execution regardless of time
- *   OUTPUTS: 1 for successful write, 0 for not written
- *   RETURN VALUE: none
- *   SIDE EFFECTS: Writes to the build buffer
- */
-static int draw_fruit_text(int pos_x, int pos_y, int need_undraw){
-    /*Check if text should be drawn*/
-    if((!need_undraw && (get_time() - game_info.fruit_text) > 3) || game_info.last_fruit == 0){
-        return 0;
-    }
-    /*Get string to be drawn*/
-    char* str = fruit_strings[game_info.last_fruit-1];
-    int length = strlen(str);
-    /*Draw the string*/
-    draw_text(pos_x - (length/2-1) * FONT_WIDTH, pos_y-FONT_HEIGHT, str, length);
-    return 1;
-}
