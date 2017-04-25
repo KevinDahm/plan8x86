@@ -5,3 +5,4 @@ vidmap should not preallocate
 get rid of switch in read/write
 have default fops table
 don't have special case for rtc open, add dtype switch
+Magic numbers in memset pages
