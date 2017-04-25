@@ -132,7 +132,7 @@ static unsigned short text_graphics[NUM_GRAPHICS_REGS] = {
 static int open_memory_and_ports ();
 static void VGA_blank (int blank_bit);
 static void set_seq_regs_and_reset (unsigned short table[NUM_SEQUENCER_REGS],
-				    unsigned char val);
+                                    unsigned char val);
 static void set_CRTC_registers (unsigned short table[NUM_CRTC_REGS]);
 static void set_attr_registers (unsigned char table[NUM_ATTR_REGS * 2]);
 static void set_graphics_registers (unsigned short table[NUM_GRAPHICS_REGS]);
@@ -203,33 +203,33 @@ static void (*vert_line_fn) (int, int, unsigned char[SCROLL_Y_DIM]);
  * to video memory in mode X; bits 8-11 in the mask_hi_bits enable writes
  * to planes 0-3, respectively
  */
-#define SET_WRITE_MASK(mask_hi_bits)                                    \
-    do {                                                                \
+#define SET_WRITE_MASK(mask_hi_bits)                                \
+    do {                                                            \
         asm volatile ("                                                     \
 	movw $0x03C4,%%dx    	/* set write mask                    */;\
 	movb $0x02,%b0                                                 ;\
 	outw %w0,(%%dx)                                                 \
-    " : : "a" ((mask_hi_bits)) : "edx", "memory");                      \
+    " : : "a" ((mask_hi_bits)) : "edx", "memory");                  \
     } while (0)
 
 /* macro used to write a byte to a port */
-#define OUTB(port,val)                                  \
-    do {                                                \
+#define OUTB(port,val)                            \
+    do {                                          \
         asm volatile ("                                                     \
         outb %b1,(%w0)                                                  \
-    " : /* no outputs */                                \
-                      : "d" ((port)), "a" ((val))       \
-                      : "memory", "cc");                \
+    " : /* no outputs */                          \
+                      : "d" ((port)), "a" ((val)) \
+                      : "memory", "cc");          \
     } while (0)
 
 /* macro used to write two bytes to two consecutive ports */
-#define OUTW(port,val)                                  \
-    do {                                                \
+#define OUTW(port,val)                            \
+    do {                                          \
         asm volatile ("                                                     \
         outw %w1,(%w0)                                                  \
-    " : /* no outputs */                                \
-                      : "d" ((port)), "a" ((val))       \
-                      : "memory", "cc");                \
+    " : /* no outputs */                          \
+                      : "d" ((port)), "a" ((val)) \
+                      : "memory", "cc");          \
     } while (0)
 
 /*
@@ -366,16 +366,16 @@ clear_mode_X ()
 
     /* Check validity of build buffer memory fence.  Report breakage. */
     for (i = 0; i < MEM_FENCE_WIDTH; i++) {
-	if (build[i] != MEM_FENCE_MAGIC) {
-	    /* puts ("lower build fence was broken"); */
-	    break;
-	}
+        if (build[i] != MEM_FENCE_MAGIC) {
+            /* puts ("lower build fence was broken"); */
+            break;
+        }
     }
     for (i = 0; i < MEM_FENCE_WIDTH; i++) {
         if (build[BUILD_BUF_SIZE + MEM_FENCE_WIDTH + i] != MEM_FENCE_MAGIC) {
-	    /* puts ("upper build fence was broken"); */
-	    break;
-	}
+            /* puts ("upper build fence was broken"); */
+            break;
+        }
     }
 }
 
@@ -402,7 +402,7 @@ set_view_window (int scr_x, int scr_y)
     int start_x, start_y; /* starting position for copying from old to new */
     int end_x, end_y;     /* ending position for copying from old to new   */
     int start_off;        /* offset of copy start relative to old build    */
-     		          /*    buffer start position                      */
+    /*    buffer start position                      */
     int length;           /* amount of data to be copied                   */
     int i;	          /* copy loop index                               */
     unsigned char* start_addr;  /* starting memory address of copy     */
@@ -424,7 +424,7 @@ set_view_window (int scr_x, int scr_y)
         img3_off + 3 * SCROLL_SIZE +
         ((scr_x + SCROLL_X_DIM - 1) >> 2) +
         (scr_y + SCROLL_Y_DIM - 1) * SCROLL_X_WIDTH < BUILD_BUF_SIZE)
-	return;
+        return;
 
     /*
      * If the new screen does not overlap at all with the old screen, none
@@ -432,10 +432,10 @@ set_view_window (int scr_x, int scr_y)
      * valid window of the build buffer in the middle of that buffer.
      */
     if (scr_x <= old_x - SCROLL_X_DIM || scr_x >= old_x + SCROLL_X_DIM ||
-	scr_y <= old_y - SCROLL_Y_DIM || scr_y >= old_y + SCROLL_Y_DIM) {
-	img3_off = BUILD_BASE_INIT - (scr_x >> 2) - scr_y * SCROLL_X_WIDTH;
-	img3 = build + img3_off + MEM_FENCE_WIDTH;
-	return;
+        scr_y <= old_y - SCROLL_Y_DIM || scr_y >= old_y + SCROLL_Y_DIM) {
+        img3_off = BUILD_BASE_INIT - (scr_x >> 2) - scr_y * SCROLL_X_WIDTH;
+        img3 = build + img3_off + MEM_FENCE_WIDTH;
+        return;
     }
 
     /*
@@ -451,18 +451,18 @@ set_view_window (int scr_x, int scr_y)
      */
     if (scr_x > old_x) {
         start_x = scr_x;
-	end_x = old_x;
+        end_x = old_x;
     } else {
         start_x = old_x;
-	end_x = scr_x;
+        end_x = scr_x;
     }
     end_x += SCROLL_X_DIM - 1;
     if (scr_y > old_y) {
         start_y = scr_y;
-	end_y = old_y;
+        end_y = old_y;
     } else {
         start_y = old_y;
-	end_y = scr_y;
+        end_y = scr_y;
     }
     end_y += SCROLL_Y_DIM - 1;
 
@@ -486,11 +486,11 @@ set_view_window (int scr_x, int scr_y)
      * (You should be able to explain why!)
      */
     if (start_addr < target_addr)
-	for (i = length; i-- > 0; )
-	    target_addr[i] = start_addr[i];
+        for (i = length; i-- > 0; )
+            target_addr[i] = start_addr[i];
     else
-	for (i = 0; i < length; i++)
-	    target_addr[i] = start_addr[i];
+        for (i = 0; i < length; i++)
+            target_addr[i] = start_addr[i];
 }
 
 
@@ -524,9 +524,9 @@ show_screen ()
 
     /* Draw to each plane in the video memory. */
     for (i = 0; i < 4; i++) {
-	SET_WRITE_MASK (1 << (i + 8));
-	copy_image (addr + ((p_off - i + 4) & 3) * SCROLL_SIZE + (p_off < i),
-	            target_img);
+        SET_WRITE_MASK (1 << (i + 8));
+        copy_image (addr + ((p_off - i + 4) & 3) * SCROLL_SIZE + (p_off < i),
+                    target_img);
     }
 
 
@@ -656,7 +656,7 @@ draw_full_block (int pos_x, int pos_y, unsigned char* blk)
     /* If block is completely off-screen, we do nothing. */
     if (pos_x + BLOCK_X_DIM <= show_x || pos_x >= show_x + SCROLL_X_DIM ||
         pos_y + BLOCK_Y_DIM <= show_y || pos_y >= show_y + SCROLL_Y_DIM)
-	return;
+        return;
 
     /* Clip any pixels falling off the left side of screen. */
     if ((x_left = show_x - pos_x) < 0)
@@ -721,7 +721,7 @@ void draw_player(int pos_x, int pos_y, unsigned char* blk, unsigned char* mask){
     /* If block is completely off-screen, we do nothing. */
     if (pos_x + BLOCK_X_DIM <= show_x || pos_x >= show_x + SCROLL_X_DIM ||
         pos_y + BLOCK_Y_DIM <= show_y || pos_y >= show_y + SCROLL_Y_DIM)
-	return;
+        return;
 
     if(!blk) { /*Erase the player and restore background */
         blk = under_player;

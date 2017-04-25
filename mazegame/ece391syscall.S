@@ -8,13 +8,13 @@
 #define DO_CALL(name,number)   \
 .GLOBL name                   ;\
 name:   PUSHL	%EBX          ;\
-	MOVL	$number,%EAX  ;\
-	MOVL	8(%ESP),%EBX  ;\
-	MOVL	12(%ESP),%ECX ;\
-	MOVL	16(%ESP),%EDX ;\
-	INT	$0x80         ;\
-	POPL	%EBX          ;\
-	RET
+  MOVL	$number,%EAX  ;\
+  MOVL	8(%ESP),%EBX  ;\
+  MOVL	12(%ESP),%ECX ;\
+  MOVL	16(%ESP),%EDX ;\
+  INT	$0x80         ;\
+  POPL	%EBX          ;\
+  RET
 
 /* the system call library wrappers */
 DO_CALL(halt,SYS_HALT)
@@ -38,8 +38,8 @@ DO_CALL(time, SYS_TIME)
 
 .GLOBAL _start
 _start:
-	CALL	main
-    PUSHL   $0
-    PUSHL   $0
-	PUSHL	%EAX
-	CALL	halt
+  CALL	main
+  PUSHL   $0
+  PUSHL   $0
+  PUSHL	%EAX
+  CALL	halt
