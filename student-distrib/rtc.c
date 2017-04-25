@@ -90,10 +90,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
  * output: -1 for invalid input, 0 for success
  * Side effects: Writes to buf, loops until RTC interrupt
  */
-int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
-    if(nbytes != 4) {
-        return 0;
-    }
+int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes) {
     // disable interrupts while writing to the rtc
     uint32_t flags;
     cli_and_save(flags);
