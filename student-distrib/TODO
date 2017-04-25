@@ -1,0 +1,7 @@
+grep nothing should do nothing
+null check in get args (check grep for getargs on blank string)
+rtc read should hang on any input size
+vidmap should not preallocate
+get rid of switch in read/write
+have default fops table
+don't have special case for rtc open, add dtype switch
