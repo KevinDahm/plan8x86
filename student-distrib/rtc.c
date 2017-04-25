@@ -151,6 +151,9 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
 
 void update_time(uint32_t reset){
     sys_time++;
+    if(sys_time%10 == 0){
+        //TODO:SEND ALARM
+    }
     if(reset){
         uint32_t flags;
         cli_and_save(flags);
