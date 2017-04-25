@@ -135,7 +135,8 @@ int32_t sys_execute(const uint8_t* command) {
 
     tasks[cur_task]->thread_status = 0;
     tasks[cur_task]->thread_waiting = 0;
-    tasks[cur_task]->rtc_flag = false;
+    tasks[cur_task]->rtc_counter = 0;
+    tasks[cur_task]->rtc_base = 512;
     tasks[cur_task]->pending_signals = 0;
     tasks[cur_task]->signal_mask = false;
 
@@ -325,7 +326,6 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
-            tasks[cur_task]->rtc_flag = false;
 
             tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
@@ -493,7 +493,8 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     memcpy(tasks[task_num]->kernel_vid_table, tasks[cur_task]->kernel_vid_table, DIR_SIZE * 4);
     tasks[task_num]->arg_str = NULL;
     tasks[task_num]->terminal = tasks[cur_task]->terminal;
-    tasks[task_num]->rtc_flag = false;
+    tasks[task_num]->rtc_counter = 0;
+    tasks[task_num]->rtc_base = tasks[cur_task]->rtc_base;
     tasks[task_num]->parent = cur_task;
     *tid = task_num;
     SET_THREAD(cur_task, task_num);
@@ -571,4 +572,9 @@ int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     default:
         return -1;
     }
+}
+
+int32_t sys_time(uint32_t* buf){
+    *buf = get_time();
+    return 0;
 }

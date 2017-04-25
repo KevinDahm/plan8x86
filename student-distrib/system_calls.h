@@ -21,5 +21,7 @@ extern int32_t sys_thread_create(uint32_t *tid, void (*thread_start)());
 extern int32_t sys_thread_join(uint32_t tid);
 
 extern int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes);
+extern int32_t sys_time(uint32_t* buf);
+
 
 #endif

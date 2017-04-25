@@ -88,7 +88,8 @@ typedef struct {
     uint32_t thread_status;
     uint8_t thread_waiting;
     uint8_t parent;
-    bool rtc_flag;
+    int32_t rtc_counter;
+    int32_t rtc_base;
     bool signal_mask;
 } pcb_t;
 
