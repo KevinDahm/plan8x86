@@ -90,6 +90,10 @@ static int maze_y_dim;          /* vertical dimension of maze   */
 static int n_fruits;          /* number of fruits in maze     */
 static int exit_x, exit_y;    /* lattice point of maze exit   */
 
+int get_fruits(){
+    return n_fruits;
+}
+
 
 /*
  * maze array index calculation macro; maze dimensions are valid only
@@ -632,7 +636,7 @@ unveil_space (int x, int y)
 
     /* Unveil the location and redraw it. */
     *cur |= MAZE_REACH;
-    draw_full_block (x * BLOCK_X_DIM, y * BLOCK_Y_DIM, BLOCK_X_DIM, BLOCK_Y_DIM, find_block (x, y), NULL);
+    draw_full_block (x * BLOCK_X_DIM, y * BLOCK_Y_DIM, find_block (x, y));
 }
 
 
@@ -670,12 +674,12 @@ check_for_fruit (int x, int y)
         /* The exit may appear. */
         if (n_fruits == 0)
             draw_full_block (exit_x * BLOCK_X_DIM, exit_y * BLOCK_Y_DIM,
-                             BLOCK_X_DIM, BLOCK_Y_DIM,
-                             find_block (exit_x, exit_y), NULL);
+
+                             find_block (exit_x, exit_y));
 
         /* Redraw the space with no fruit. */
         draw_full_block (x * BLOCK_X_DIM, y * BLOCK_Y_DIM,
-                         BLOCK_X_DIM, BLOCK_Y_DIM, find_block (x, y), NULL);
+                         find_block (x, y));
     }
 
     /* Return the fruit number found. */
@@ -739,7 +743,7 @@ _add_a_fruit (int show)
     /* If necessary, draw the fruit on the screen. */
     if (show)
         draw_full_block (x * BLOCK_X_DIM, y * BLOCK_Y_DIM,
-                         BLOCK_X_DIM, BLOCK_Y_DIM, find_block (x, y), NULL);
+                         find_block (x, y));
 }
 
 
@@ -763,8 +767,8 @@ add_a_fruit ()
     /* The exit may disappear. */
     if (n_fruits == 1)
         draw_full_block (exit_x * BLOCK_X_DIM, exit_y * BLOCK_Y_DIM,
-                         BLOCK_X_DIM, BLOCK_Y_DIM,
-                         find_block (exit_x, exit_y), NULL);
+
+                         find_block (exit_x, exit_y));
 
     /* Return the current number of fruits in the maze. */
     return n_fruits;

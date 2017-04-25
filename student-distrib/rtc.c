@@ -4,6 +4,8 @@
 #include "i8259.h"
 static void do_rtc_irq(int dev_id);
 static uint8_t num_open;
+static uint32_t rtc_freq;
+static uint32_t sys_time = 0;
 
 /* void rtc_init(irqaction* rtc_handler)
  * Decription: Initialzes the rtc and it's irqaction struct for use
@@ -17,6 +19,7 @@ void rtc_init(irqaction* rtc_handler){
     //set control register A
     uint32_t x = BASE_RTC_FREQ;
     rtc_write(0, &x, 4);
+    tasks[INIT]->rtc_base = MAX_RTC_FREQ;
 
     //set control register B
     outb(CHOOSE_RTC_B, RTC_PORT);
@@ -38,6 +41,7 @@ void rtc_init(irqaction* rtc_handler){
 
     //enable the interrupt
     enable_irq(2);
+    enable_irq(8);
 }
 
 /* int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes)
@@ -54,7 +58,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
     uint32_t freq =  *((uint32_t*)buf);
 
     // Check for out of bounds parameters
-    if(freq < 2 || freq > RTC_MAX_FREQ) {
+    if(freq < 2 || freq > MAX_RTC_FREQ) {
         return -1;
     }
 
@@ -69,7 +73,10 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
     if (freq != 1) {
         return -1;
     }
-
+    tasks[cur_task]->rtc_base = MAX_RTC_FREQ >> logf;
+    if(tasks[cur_task]->rtc_base){
+        rtc_freq = tasks[cur_task]->rtc_base;
+    }
     // disable interrupts while writing to the rtc
     uint32_t flags;
     cli_and_save(flags);
@@ -91,29 +98,20 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
  * Side effects: Writes to buf, loops until RTC interrupt
  */
 int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
-    if(nbytes != 4) {
-        return 0;
+    if(nbytes < 4) {
+        return -1;
     }
-    // disable interrupts while writing to the rtc
-    uint32_t flags;
-    cli_and_save(flags);
-
-    // Get the frequency
-    outb(CHOOSE_RTC_A, RTC_PORT);
-    uint8_t freq = inb(RTC_PORT+1);
-
-    restore_flags(flags);
 
     // Translate the frequency and write it to the buf
-    *((uint32_t*)buf) = 1 << (16 - (freq & 0xF));
+
 
     // loop until RTC interrupt
-    tasks[cur_task]->rtc_flag = true;
+    tasks[cur_task]->rtc_counter = tasks[cur_task]->rtc_base;
 
-    while (tasks[cur_task]->rtc_flag) {
+    while (tasks[cur_task]->rtc_counter > 0) {
         reschedule();
     }
-
+    *((uint32_t*)buf) = 1 + (-tasks[cur_task]->rtc_counter)/tasks[cur_task]->rtc_base;
     return 0;
 }
 
@@ -124,7 +122,6 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
  * Side effects: None
  */
 int32_t rtc_open(const int8_t* filename){
-    enable_irq(8);
     num_open++;
     return 0;
 }
@@ -137,9 +134,6 @@ int32_t rtc_open(const int8_t* filename){
  */
 int32_t rtc_close(int32_t fd){
     num_open--;
-    if (num_open == 0) {
-        disable_irq(8);
-    }
     return 0;
 }
 
@@ -155,6 +149,29 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
     return 0;
 }
 
+void update_time(uint32_t reset){
+    sys_time++;
+    if(sys_time%10 == 0){
+        //TODO:SEND ALARM
+    }
+    if(reset){
+        uint32_t flags;
+        cli_and_save(flags);
+
+        // write log(freq) to the rtc
+        outb(CHOOSE_RTC_A, RTC_PORT);
+        outb(15 | RTC_CMD_A, RTC_PORT+1);// 15 = 16 - log(BASE_RTC_FREQ)
+
+        restore_flags(flags);
+    }
+    tasks[INIT]->rtc_counter = tasks[INIT]->rtc_base;
+
+
+}
+
+uint32_t get_time(){
+    return sys_time;
+}
 
 /* void do_rtc_irq(int dev_id)
  * Decription: Standard rtc handler
@@ -167,7 +184,11 @@ void do_rtc_irq(int dev_id) {
     // Reset rtc_flag
     uint8_t task;
     for (task = 0; task < NUM_TASKS; task++) {
-        tasks[task]->rtc_flag = false;
+        tasks[task]->rtc_counter-= rtc_freq;
+    }
+
+    if(!tasks[INIT]->rtc_counter){
+        update_time(!num_open);
     }
     // read port C to acknowledge the interrupt
     outb(CHOOSE_RTC_C, RTC_PORT);
