@@ -8,18 +8,18 @@
  * documentation for any purpose, without fee, and without written agreement is
  * hereby granted, provided that the above copyright notice and the following
  * two paragraphs appear in all copies of this software.
- * 
- * IN NO EVENT SHALL THE AUTHOR OR THE UNIVERSITY OF ILLINOIS BE LIABLE TO 
- * ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL 
- * DAMAGES ARISING OUT  OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, 
- * EVEN IF THE AUTHOR AND/OR THE UNIVERSITY OF ILLINOIS HAS BEEN ADVISED 
+ *
+ * IN NO EVENT SHALL THE AUTHOR OR THE UNIVERSITY OF ILLINOIS BE LIABLE TO
+ * ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
+ * DAMAGES ARISING OUT  OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
+ * EVEN IF THE AUTHOR AND/OR THE UNIVERSITY OF ILLINOIS HAS BEEN ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
- * THE AUTHOR AND THE UNIVERSITY OF ILLINOIS SPECIFICALLY DISCLAIM ANY 
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE 
+ *
+ * THE AUTHOR AND THE UNIVERSITY OF ILLINOIS SPECIFICALLY DISCLAIM ANY
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE
  * PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND NEITHER THE AUTHOR NOR
- * THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE, 
+ * THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE,
  * SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
  *
  * Author:        Steve Lumetta
@@ -49,10 +49,10 @@
  * chosen to ensure that a maze fills the scrolling region of the screen.
  * Maximum values are somewhat arbitrary.
  */
-#define MAZE_MIN_X_DIM \
+#define MAZE_MIN_X_DIM                                                  \
     ((SCROLL_X_DIM + (BLOCK_X_DIM - 1) + 2 * SHOW_MIN) / (2 * BLOCK_X_DIM))
 #define MAZE_MAX_X_DIM 50
-#define MAZE_MIN_Y_DIM \
+#define MAZE_MIN_Y_DIM                                                  \
     ((SCROLL_Y_DIM + (BLOCK_Y_DIM - 1) + 2 * SHOW_MIN) / (2 * BLOCK_Y_DIM))
 #define MAZE_MAX_Y_DIM 30
 
@@ -99,5 +99,8 @@ extern unsigned char* get_player_mask (dir_t cur_dir);
 
 /* determine which directions are open to movement from a given maze point */
 extern void find_open_directions (int x, int y, int op[NUM_DIRS]);
+
+extern int get_fruits();
+
 
 #endif /* MAZE_H */
