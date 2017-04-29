@@ -178,6 +178,9 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->file_descs = file_desc_arrays[cur_task];
     uint32_t file_i;
     for (file_i = 0; file_i < FILE_DESCS_LENGTH; file_i++) {
+        tasks[cur_task]->file_descs[file_i].flags = FD_CLEAR;
+        tasks[cur_task]->file_descs[file_i].inode = 0;
+        tasks[cur_task]->file_descs[file_i].file_pos = 0;
         tasks[cur_task]->file_descs[file_i].ops = &default_ops;
     }
 
@@ -376,8 +379,14 @@ int32_t sys_close(int32_t fd) {
         return -1;
     }
 
+    int32_t ret = (*tasks[cur_task]->file_descs[fd].ops->close)(fd);
+
     tasks[cur_task]->file_descs[fd].flags = FD_CLEAR;
-    return (*tasks[cur_task]->file_descs[fd].ops->close)(fd);
+    tasks[cur_task]->file_descs[fd].inode = 0;
+    tasks[cur_task]->file_descs[fd].file_pos = 0;
+    tasks[cur_task]->file_descs[fd].ops = &default_ops;
+
+    return ret;
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
