@@ -223,6 +223,7 @@ int32_t sys_execute(const uint8_t* command) {
     if (buf[0] != 0x7F || buf[1] != 0x45 || buf[2] != 0x4C || buf[3] != 0x46) {
         // File is not executable
         cur_task = tasks[cur_task]->parent;
+        switch_page_directory(cur_task);
         return -1;
     }
 
