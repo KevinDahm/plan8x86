@@ -176,7 +176,7 @@ uint32_t get_size(uint32_t inode_index) {
 
 int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry) {
     uint32_t i;
-    if ((i = get_index(fname)) != -1)
+    if ((i = get_index(fname)) != (uint32_t)-1)
         return read_dentry_by_index(i, dentry);
     else
         return -1;

@@ -21,6 +21,9 @@ extern int32_t ece391_getargs (uint8_t* buf, int32_t nbytes);
 extern int32_t ece391_vidmap (uint8_t** screen_start);
 extern int32_t ece391_set_handler (int32_t signum, void* handler);
 extern int32_t ece391_sigreturn (void);
+extern int32_t ece391_vidmap_all(uint8_t** screen_start);
+extern int32_t ece391_ioperm(uint32_t from, uint32_t num, int32_t turn_on);
+extern int32_t ece391_thread_create(uint32_t *tid, void (*thread_start)());
 
 enum signums {
 	DIV_ZERO = 0,

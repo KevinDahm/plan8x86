@@ -14,5 +14,7 @@
 #define SYS_VIDMAP_ALL 11
 #define SYS_IOPERM 12
 #define SYS_THREAD_CREATE 13
+#define SYS_THREAD_JOIN 14
+#define SYS_TIME 15
 
 #endif /* ECE391SYSNUM_H */

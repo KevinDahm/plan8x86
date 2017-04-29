@@ -4,12 +4,12 @@
 #include "rtc.h"
 #include "system_calls.h"
 #include "i8259.h"
-
+#include "page.h"
 /* void terminal_init()
  * Decription: Initialzes the terminal operations
- * input: none
- * output: none
- * Side effects: initializes function pointers for system calls
+ * Input: none
+ * Output: none
+ * Side Effects: initializes function pointers for system calls
  */
 void terminal_init() {
     //setup stdin
@@ -27,9 +27,9 @@ void terminal_init() {
 
 /* void terminal_open(const int8_t* filename)
  * Decription: Opens the terminal, which currently does nothing
- * input: filename - unused
- * output: 0 for success
- * Side effects: None
+ * Input: filename - unused
+ * Output: 0 for success
+ * Side Effects: None
  */
 int32_t terminal_open(const int8_t* filename) {
     return 0;
@@ -37,9 +37,9 @@ int32_t terminal_open(const int8_t* filename) {
 
 /* void terminal_close(int32_t fd)
  * Decription: Closes the terminal, which currently does nothing
- * input: fd - unused
- * output: 0 for success
- * Side effects: None
+ * Input: fd - unused
+ * Output: 0 for success
+ * Side Effects: None
  */
 int32_t terminal_close(int32_t fd) {
     return 0;
@@ -47,11 +47,11 @@ int32_t terminal_close(int32_t fd) {
 
 /* int32_t stdin_write(int32_t fd, const void* buf, int32_t nbytes)
  * Decription: Fails, don't write to stdin
- * input: fd - ignored
+ * Input: fd - ignored
  *        buf - ignored
  *        nbytes - ignored
- * output: -1 for bad call
- * Side effects: none
+ * Output: -1 for bad call
+ * Side Effects: none
  */
 int32_t stdin_write(int32_t fd, const void* buf, int32_t nbytes){
     return -1;
@@ -59,11 +59,11 @@ int32_t stdin_write(int32_t fd, const void* buf, int32_t nbytes){
 
 /* int32_t stdout_read(int32_t fd, void* buf, int32_t nbytes)
  * Decription: Fails, don't read from stdout
- * input: fd - ignored
+ * Input: fd - ignored
  *        buf - ignored
  *        nbytes - ignored
- * output: -1 for bad call
- * Side effects: none
+ * Output: -1 for bad call
+ * Side Effects: none
  */
 int32_t stdout_read(int32_t fd, void* buf, int32_t nbytes){
     return -1;
@@ -71,11 +71,11 @@ int32_t stdout_read(int32_t fd, void* buf, int32_t nbytes){
 
 /* int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
  * Decription: Writes the string buf to the screen
- * input: fd - ignored
+ * Input: fd - ignored
  *        buf - pointer to string to write
  *        nbytes - number of characters to write
- * output: 0 for success
- * Side effects: Writes to video memory
+ * Output: 0 for success
+ * Side Effects: Writes to video memory
  */
 int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes) {
     register int32_t index = 0;
@@ -89,52 +89,29 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes) {
 /* int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
  * Decription: Reads from the keyboard, displaying text and returning a line
  *             to the user
- * input: fd - Ignored
+ * Input: fd - Ignored
  *        buf - pointer to write string
  *        nbytes - number of characters wanted, at most 128
- * output: Number of valid chars written to buf
- * Side effects: Writes to buf and video memory, calls command functions
+ * Output: Number of valid chars written to buf
+ * Side Effects: Writes to buf and video memory, calls command functions
  */
 int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     kbd_t k;
-    int32_t i = 0;
     int32_t total = 0;
     int8_t a;
-    int32_t x, y;
-    nbytes = nbytes > 128 ? 128 : nbytes; //Cap line size at 128
+    nbytes = nbytes > KBD_BUFFER_SIZE ? KBD_BUFFER_SIZE : nbytes; //Cap line size at 128
     memset(buf, 0, nbytes);
-    while (1) { //Keep reading
+    // TODO: Arrow keys?
+    while (true) { //Keep reading
         if (kbd_read(0, &k, 2)){ //Read a single key
             if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
                 clear();
                 set_cursor(0, 0);
-                i = 0;
                 total = 0;
             } else if(kbd_equal(k, BKSP_KEY)) { //Delete the previous character
-                if(i > 0) {
-                    memmove(buf+i-1, buf+i, total - i);
+                if (total > 0) {
                     ((uint8_t*)buf)[total-1] = 0;
                     removec();
-                    x = screen_x;
-                    y = screen_y;
-                    terminal_write(1, buf+i-1, total-i+1);
-                    set_cursor(x, y);
-                    i--;
-                    total--;
-
-                }
-            } else if(kbd_equal(k,DEL_KEY)){
-                if(total-i != 0){
-                    i++;
-                    set_cursor(screen_x + 1, screen_y);
-                    memmove(buf+i-1, buf+i, total - i);
-                    ((uint8_t*)buf)[total-1] = 0;
-                    removec();
-                    x = screen_x;
-                    y = screen_y;
-                    terminal_write(1, buf+i-1, total-i+1);
-                    set_cursor(x, y);
-                    i--;
                     total--;
                 }
             } else if(kbd_equal(k, ENTER)) { //Write a newline and return
@@ -146,36 +123,15 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                 }
                 return total;
             } else if(kbd_equal(k,TAB_KEY) && total < nbytes){// We write a tab as 4 spaces
-                memmove(buf+i+1, buf+i, total-i);
-                ((uint8_t*)buf)[i] = '\t';
-                x = screen_x;
-                y = screen_y;
-                terminal_write(1, buf+i, total-i+1);
-                set_cursor(x+4, y);
-                i++;
+                ((uint8_t*)buf)[total] = '\t';
+                terminal_write(1, buf + total, 1);
                 total++;
 
-            } else if(kbd_equal(k,LEFT_KEY)){
-                if(total-i != total){
-                    i--;
-                    set_cursor(screen_x - 1, screen_y);
-                }
-            }else if(kbd_equal(k,RIGHT_KEY)){
-                if(total-i != 0){
-                    i++;
-                    set_cursor(screen_x + 1, screen_y);
-                }
-            }else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
+            } else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
                 //not a special character, just write it to the screen
-                memmove(buf+i+1, buf+i, total - i);
-                ((uint8_t*)buf)[i] = a;
-                x = screen_x;
-                y = screen_y;
-                terminal_write(1, buf+i, total-i+1);
-                set_cursor(x+1, y);
-                i++;
+                ((uint8_t*)buf)[total] = a;
+                terminal_write(1, buf + total, 1);
                 total++;
-
             }
         }
     }

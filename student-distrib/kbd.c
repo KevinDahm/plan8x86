@@ -1,18 +1,20 @@
 #include "kbd.h"
 #include "lib.h"
 #include "i8259.h"
+#include "schedule.h"
+#include "task.h"
 
 #define SET(s,r,c) case s: kbd_state.row = r; kbd_state.col = c; break
-#define BUFFER_SIZE 128
-static uint8_t e0_waiting = 0;
-static uint8_t kbd_ready = 0;
-static uint8_t caps_held = 0;
 
-static uint32_t write_index = 0;
-static uint32_t read_index = 0;
-static uint8_t buffer_full = 0;
+static bool e0_waiting = false;
+static bool kbd_ready = false;
+static bool caps_held = false;
 
-static kbd_t kbd_buffer[BUFFER_SIZE];
+static uint32_t write_index[NUM_TERM];
+static uint32_t read_index[NUM_TERM];
+static bool buffer_full[NUM_TERM];
+
+static kbd_t kbd_buffer[NUM_TERM][KBD_BUFFER_SIZE];
 
 // Current kbd state
 kbd_t kbd_state;
@@ -60,8 +62,11 @@ int8_t ascii_shift_lookup[][16] = {
 void _kbd_do_irq(int dev_id) {
     uint8_t c;
     c = inb(0x60);
+    // 0xE0 scancode indicates another byte is on the way.
+    // This is to extend the number of keys the keyboard can
+    // use. If we see 0xE0 we return and wait for another interupt.
     if (c == 0xE0) {
-        e0_waiting = 1;
+        e0_waiting = true;
         return;
     }
 
@@ -138,14 +143,20 @@ void _kbd_do_irq(int dev_id) {
 
         // Capslock pressed
     case 0x003A:
-        if (!caps_held)
-            kbd_state.capsLock ^= 1;
-        caps_held = 1;
+        if (!caps_held) {
+            kbd_state.capsLock ^= true;
+        }
+        caps_held = true;
         break;
         // Capslock released
-    case 0x00BA: caps_held = 0; break;
+    case 0x00BA: caps_held = false; break;
 
         // Defines cases for all keys other than the above
+        // SET takes the scancode and a row,col pair and
+        // creates a case statement for the scancode that
+        // fills in the row,col fields of kbd_state.
+        // This is intended to map to the physical locations
+        // of each key on a "standard" keyboard
         SET(0x0001, 0, 1);   // ESC
         SET(0x003B, 0, 2);   // F1
         SET(0x003C, 0, 3);   // F2
@@ -223,26 +234,48 @@ void _kbd_do_irq(int dev_id) {
 
         // If we don't recognize the key, clear kbd_state (no key is being pressed/one was just released)
     default:
-        kbd_state.row = 0;
-        kbd_state.col = 0;
+        kbd_state.row = false;
+        kbd_state.col = false;
         break;
     }
-    // If buffer isn't full and a key is pressed
-    if(!buffer_full && kbd_state.state & 0xFF) {
-        // Write key to buffer
-        kbd_buffer[write_index] = kbd_state;
-        // Increment write_index
-        write_index = (write_index + 1)%BUFFER_SIZE;
 
-        // If buffer full, disable writing
-        if (write_index == read_index)
-            buffer_full = 1;
+    tasks[term_process[active]]->status = TASK_RUNNING;
+    interupt_preempt = true;
+
+    int f;
+    for (f = 0; f < NUM_TERM; f++) {
+        if (kbd_equal(kbd_state, f + F1_KEY)) {
+            update_screen(f);
+            break;
+        }
     }
 
-    e0_waiting = 0;
-    //Ready to read if key is pressed
-    kbd_ready = 1;
+    if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
+        SET_SIGNAL(term_process[active], INTERRUPT);
+    } else {
+        // If buffer isn't full and a key is pressed
+        if(!buffer_full[active] && kbd_state.state & 0xFF) {
 
+            // Write key to buffer
+            kbd_buffer[active][write_index[active]] = kbd_state;
+            // Increment write_index
+            write_index[active] = (write_index[active] + 1)%KBD_BUFFER_SIZE;
+
+            // If buffer full, disable writing
+            if (write_index[active] == read_index[active])
+                buffer_full[active] = true;
+        }
+    }
+
+    e0_waiting = false;
+    //Ready to read if key is pressed
+    kbd_ready = true;
+}
+
+void kbd_clear() {
+    write_index[TASK_T] = 0;
+    read_index[TASK_T] = 0;
+    buffer_full[TASK_T] = false;
 }
 
 void kbd_init(irqaction* keyboard_handler) {
@@ -257,6 +290,12 @@ void kbd_init(irqaction* keyboard_handler) {
 
     irq_desc[0x1] = keyboard_handler;
     enable_irq(1);
+
+    int i;
+    for (i = 0; i < NUM_TERM; i++) {
+        write_index[i] = 0;
+        read_index[i] = 0;
+    }
 }
 
 int32_t kbd_open(const int8_t* filename) {
@@ -272,20 +311,21 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
-    nbytes = nbytes > sizeof(kbd_t)*BUFFER_SIZE ? sizeof(kbd_t)*BUFFER_SIZE : nbytes;
-    uint32_t i = 0;
+    kbd_clear();
+    nbytes = (uint32_t)nbytes > sizeof(kbd_t)*KBD_BUFFER_SIZE ? sizeof(kbd_t)*KBD_BUFFER_SIZE : nbytes;
+    int32_t i = 0;
     while(i < nbytes){
-        if(read_index != write_index){
-            *((kbd_t*)buf) = kbd_buffer[read_index];
-            read_index = (read_index + 1)%BUFFER_SIZE;
+        if(read_index[TASK_T] != write_index[TASK_T] || buffer_full[TASK_T] == true){
+            *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
+            read_index[TASK_T] = (read_index[TASK_T] + 1)%KBD_BUFFER_SIZE;
             i += sizeof(kbd_t);
-            buffer_full = 0;
-        }else{
-            return i;
+            buffer_full[TASK_T] = false;
+        } else {
+            term_process[TASK_T] = cur_task;
+            reschedule();
         }
-        // Don't waste CPU cycles. Nothing's going to move until a kbd interrupt happens
-        asm volatile("hlt;");
     }
+    tasks[cur_task]->status = TASK_RUNNING;
     return i;
 }
 
@@ -328,14 +368,14 @@ kbd_t kbd_poll_echo() {
 
 kbd_t kbd_get_echo() {
     while (!kbd_ready) {asm volatile ("hlt");}
-    kbd_ready = 0;
+    kbd_ready = false;
     _kbd_print_ascii(kbd_state);
     return kbd_state;
 }
 
 kbd_t kbd_get() {
     while (!kbd_ready) {asm volatile ("hlt");}
-    kbd_ready = 0;
+    kbd_ready = false;
     return kbd_state;
 }
 

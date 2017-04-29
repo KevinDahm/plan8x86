@@ -21,6 +21,16 @@ typedef unsigned short uint16_t;
 typedef char int8_t;
 typedef unsigned char uint8_t;
 
+typedef uint8_t bool;
+#define true 1
+#define false 0
+
+// This is black magic. Be careful. Don't touch this.
+// This allows me to insert constants into to strings
+// See the end of sys_execute.
+#define st(a) #a
+#define str(a) st(a)
+
 #endif /* ASM */
 
 #endif /* _TYPES_H */

@@ -3,15 +3,38 @@
  */
 
 #include "lib.h"
-#define VIDEO 0xB8000
+#include "task.h"
+#include "page.h"
+#include "system_calls.h"
+
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x7
+#define ATTRIB 0x8F
 #define BLUE 0x1F
 
-static int color = ATTRIB;
+#define TAB_SIZE 4
 
-static char* video_mem = (char *)VIDEO;
+static int32_t color[NUM_TERM] = {ATTRIB, ATTRIB, ATTRIB};
+static int32_t term_x[NUM_TERM];
+static int32_t term_y[NUM_TERM];
+
+void video_init() {
+    int i, j;
+    for (i = 0; i < NUM_TERM; i++) {
+        for (j = 1; j < NUM_COLS * NUM_ROWS; j++) {
+            *(terminal_video[i] + (j << 1)) = ' ';
+            *(terminal_video[i] + (j << 1) + 1) = color[i];
+        }
+    }
+}
+
+uint8_t *get_video_mem() {
+    if (cur_task == 0) {
+        return (uint8_t *)VIDEO;
+    } else {
+        return (uint8_t *)(TASK_ADDR + MB4);
+    }
+}
 
 /*
  * void clear(void);
@@ -19,14 +42,11 @@ static char* video_mem = (char *)VIDEO;
  *   Return Value: none
  *    Function: Clears video memory
  */
-
-void
-clear(void)
-{
+void clear(void) {
     int32_t i;
-    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
+    for(i = 0; i < NUM_COLS * NUM_ROWS; i++) {
+        *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
+        *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
 }
 
@@ -43,55 +63,78 @@ void blue_screen(void) {
     set_cursor(0, 0);
 }
 
+
+void update_screen(uint32_t terminal) {
+    if(terminal >= NUM_TERM || terminal == active){
+        return;
+    }
+    memcpy(terminal_video[active], (void *)VIDEO, KB4);
+
+    int i;
+    for (i = 1; i < NUM_TASKS; i++) {
+        if (tasks[i]->terminal == active) {
+            page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[i]->usr_vid_table;
+            usr_vid_table->addr = (uint32_t)terminal_video[active] >> 12;
+        } else if (tasks[i]->terminal == terminal) {
+            page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[i]->usr_vid_table;
+            usr_vid_table->addr = VIDEO >> 12;
+        }
+    }
+
+    switch_page_directory(cur_task);
+
+    active = terminal;
+
+    memcpy((void *)VIDEO, terminal_video[active], KB4);
+
+    update_cursor();
+}
+
+void update_cursor() {
+    unsigned short position = (term_y[active] * NUM_COLS) + term_x[active];
+
+    // cursor LOW port to vga INDEX register
+    outb(0x0F, 0x3D4);
+    outb((unsigned char)(position & 0xFF), 0x3D5);
+    // cursor HIGH port to vga INDEX register
+    outb(0x0E, 0x3D4);
+    outb((unsigned char )((position >> 8) & 0xFF), 0x3D5);
+}
 /*
  * void set_cursor(uint32_t x, uint32_t y);
  *   Inputs: (x, y)
  *   Return Value: none
  *    Function: Sets cursor to columnn x, row y
  */
-
-void set_cursor(uint32_t x, uint32_t y){
-    while(x < 0){
-        x+=NUM_COLS;
-        y--;
-    }while(x >= NUM_COLS){
-        x-=NUM_COLS;
-        y++;
-    }
-    if(y < 0 || y >= NUM_ROWS)
+void set_cursor(uint32_t x, uint32_t y) {
+    if (x >= NUM_COLS || y >= NUM_ROWS) {
         return;
-    screen_x = x;
-    screen_y = y;
+    }
 
-    unsigned short position=(y*NUM_COLS) + x;
+    term_x[TASK_T] = x;
+    term_y[TASK_T] = y;
 
-    // cursor LOW port to vga INDEX register
-    outb(0x0F, 0x3D4);
-    outb((unsigned char)(position&0xFF), 0x3D5);
-    // cursor HIGH port to vga INDEX register
-    outb(0x0E, 0x3D4);
-    outb((unsigned char )((position>>8)&0xFF), 0x3D5);
+    update_cursor();
 }
+
 /*
  * void set_color(col);
  *   Inputs: col - Color to use
  *   Return Value: none
  *    Function: Sets future writes to given color
  */
-
-void set_color(uint8_t col){
-    color = col;
+void set_color(uint8_t col) {
+    color[TASK_T] = col;
 }
 
-void move_up(){
+void move_up() {
     int i;
-    screen_y --;
-    memmove((void*)VIDEO, (void*)(VIDEO + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
+    term_y[TASK_T]--;
+    memmove((void*)get_video_mem(), (void*)(get_video_mem() + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
     for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = color;
+        *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
+        *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
-
 }
 /* Standard printf().
  * Only supports the following format strings:
@@ -111,9 +154,7 @@ void move_up(){
  *       Also note: %x is the only conversion specifier that can use
  *       the "#" modifier to alter output.
  * */
-int32_t
-printf(int8_t *format, ...)
-{
+int32_t printf(int8_t *format, ...) {
     /* Pointer to the format string */
     int8_t* buf = format;
 
@@ -228,10 +269,7 @@ printf(int8_t *format, ...)
  *   Return Value: Number of bytes written
  *    Function: Output a string to the console
  */
-
-int32_t
-puts(int8_t* s)
-{
+int32_t puts(int8_t* s) {
     register int32_t index = 0;
     while(s[index] != '\0') {
         putc(s[index]);
@@ -247,32 +285,29 @@ puts(int8_t* s)
  *   Return Value: void
  *    Function: Output a character to the console
  */
-
-void
-putc(uint8_t c)
-{
+void putc(uint8_t c) {
     int i;
     if(c == '\n' || c == '\r') {
-        screen_y++;
-        screen_x=0;
-        if(screen_y == NUM_ROWS){
+        term_y[TASK_T]++;
+        term_x[TASK_T] = 0;
+        if(term_y[TASK_T] == NUM_ROWS){
             move_up();
         }
     } else if(c == '\t'){
-        for(i = 0; i < 4; i++){
+        for(i = 0; i < TAB_SIZE; i++){
             putc(' ');
         }
     }else {
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
-        screen_x++;
-        screen_y = (screen_y + (screen_x / NUM_COLS));
-        if(screen_y == NUM_ROWS)
+        *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = c;
+        *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
+        term_x[TASK_T]++;
+        term_y[TASK_T] = term_y[TASK_T] + (term_x[TASK_T] / NUM_COLS);
+        if (term_y[TASK_T] == NUM_ROWS)
             move_up();
-        screen_x %= NUM_COLS;
+        term_x[TASK_T] %= NUM_COLS;
 
     }
-    set_cursor(screen_x, screen_y);
+    update_cursor();
 }
 
 /*
@@ -280,20 +315,18 @@ putc(uint8_t c)
  *   Return Value: void
  *    Function: removes a character from the console
  */
-
-void
-removec()
-{
-    if(screen_x == 0 && screen_y == 0)
+void removec() {
+    if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
         return;
-    screen_x--;
-    if(screen_x == -1) {
-        screen_y--;
-        screen_x += NUM_COLS;
+    term_x[TASK_T]--;
+    if(term_x[TASK_T] == -1) {
+        term_y[TASK_T]--;
+        term_x[TASK_T] += NUM_COLS;
     }
-    *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = ' ';
-    *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = color;
-    set_cursor(screen_x, screen_y);
+    *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = ' ';
+    *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
+
+    update_cursor();
 }
 
 /*
@@ -305,9 +338,7 @@ removec()
  *    Function: Convert a number to its ASCII representation, with base "radix"
  */
 
-int8_t*
-itoa(uint32_t value, int8_t* buf, int32_t radix)
-{
+int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix) {
     static int8_t lookup[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     int8_t *newbuf = buf;
@@ -347,9 +378,7 @@ itoa(uint32_t value, int8_t* buf, int32_t radix)
  *    Function: reverses a string s
  */
 
-int8_t*
-strrev(int8_t* s)
-{
+int8_t* strrev(int8_t* s) {
     register int8_t tmp;
     register int32_t beg=0;
     register int32_t end=strlen(s) - 1;
@@ -372,9 +401,7 @@ strrev(int8_t* s)
  *    Function: return length of string s
  */
 
-uint32_t
-strlen(const int8_t* s)
-{
+uint32_t strlen(const int8_t* s) {
     register uint32_t len = 0;
     while(s[len] != '\0')
         len++;
@@ -391,9 +418,7 @@ strlen(const int8_t* s)
  *    Function: set n consecutive bytes of pointer s to value c
  */
 
-void*
-memset(void* s, int32_t c, uint32_t n)
-{
+void* memset(void* s, int32_t c, uint32_t n) {
     c &= 0xFF;
     asm volatile("                  \n\
             .memset_top:            \n\
@@ -440,9 +465,7 @@ memset(void* s, int32_t c, uint32_t n)
  */
 
 /* Optimized memset_word */
-void*
-memset_word(void* s, int32_t c, uint32_t n)
-{
+void* memset_word(void* s, int32_t c, uint32_t n) {
     asm volatile("                  \n\
             movw    %%ds, %%dx      \n\
             movw    %%dx, %%es      \n\
@@ -466,9 +489,7 @@ memset_word(void* s, int32_t c, uint32_t n)
  *    Function: set n consecutive memory locations of pointer s to value c
  */
 
-void*
-memset_dword(void* s, int32_t c, uint32_t n)
-{
+void* memset_dword(void* s, int32_t c, uint32_t n) {
     asm volatile("                  \n\
             movw    %%ds, %%dx      \n\
             movw    %%dx, %%es      \n\
@@ -492,9 +513,7 @@ memset_dword(void* s, int32_t c, uint32_t n)
  *    Function: copy n bytes of src to dest
  */
 
-void*
-memcpy(void* dest, const void* src, uint32_t n)
-{
+void* memcpy(void* dest, const void* src, uint32_t n) {
     asm volatile("                  \n\
             .memcpy_top:            \n\
             testl   %%ecx, %%ecx    \n\
@@ -538,15 +557,13 @@ memcpy(void* dest, const void* src, uint32_t n)
  * void* memmove(void* dest, const void* src, uint32_t n);
  *   Inputs: void* dest = destination of move
  *            const void* src = source of move
- *            uint32_t n = number of bytes to move
+ *            uint32_t n = number of byets to move
  *   Return Value: pointer to dest
  *    Function: move n bytes of src to dest
  */
 
 /* Optimized memmove (used for overlapping memory areas) */
-void*
-memmove(void* dest, const void* src, uint32_t n)
-{
+void* memmove(void* dest, const void* src, uint32_t n) {
     asm volatile("                  \n\
             movw    %%ds, %%dx      \n\
             movw    %%dx, %%es      \n\
@@ -580,10 +597,7 @@ memmove(void* dest, const void* src, uint32_t n)
  *                    indicates the opposite.
  *    Function: compares string 1 and string 2 for equality
  */
-
-int32_t
-strncmp(const int8_t* s1, const int8_t* s2, uint32_t n)
-{
+int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n) {
     int32_t i;
     for(i=0; i<n; i++) {
         if( (s1[i] != s2[i]) ||
@@ -608,10 +622,7 @@ strncmp(const int8_t* s1, const int8_t* s2, uint32_t n)
  *   Return Value: pointer to dest
  *    Function: copy the source string into the destination string
  */
-
-int8_t*
-strcpy(int8_t* dest, const int8_t* src)
-{
+int8_t* strcpy(int8_t* dest, const int8_t* src) {
     int32_t i=0;
     while(src[i] != '\0') {
         dest[i] = src[i];
@@ -630,10 +641,7 @@ strcpy(int8_t* dest, const int8_t* src)
  *   Return Value: pointer to dest
  *    Function: copy n bytes of the source string into the destination string
  */
-
-int8_t*
-strncpy(int8_t* dest, const int8_t* src, uint32_t n)
-{
+int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
     int32_t i=0;
     while(src[i] != '\0' && i < n) {
         dest[i] = src[i];
@@ -654,12 +662,9 @@ strncpy(int8_t* dest, const int8_t* src, uint32_t n)
  *   Return Value: void
  *    Function: increments video memory. To be used to test rtc
  */
-
-void
-test_interrupts(void)
-{
+void test_interrupts(void) {
     int32_t i;
     for (i=0; i < NUM_ROWS*NUM_COLS; i++) {
-        video_mem[i<<1]++;
+        get_video_mem()[i<<1]++;
     }
 }

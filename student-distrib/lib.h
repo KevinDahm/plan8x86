@@ -6,9 +6,10 @@
 #define _LIB_H
 
 #include "types.h"
+#include "schedule.h"
+#include "page.h"
 
-int screen_x;
-int screen_y;
+void video_init();
 extern int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
 void removec();
@@ -18,8 +19,12 @@ int8_t *strrev(int8_t* s);
 uint32_t strlen(const int8_t* s);
 void clear(void);
 void blue_screen(void);
+void update_cursor();
 void set_cursor(uint32_t x, uint32_t y);
 void set_color(uint8_t col);
+void move_up();
+void update_screen(uint32_t terminal);
+uint32_t get_active();
 
 void* memset(void* s, int32_t c, uint32_t n);
 void* memset_word(void* s, int32_t c, uint32_t n);
@@ -35,6 +40,8 @@ int32_t bad_userspace_addr(const void* addr, int32_t len);
 int32_t safe_strncpy(int8_t* dest, const int8_t* src, int32_t n);
 
 void test_interrupts();
+
+int8_t terminal_video[NUM_TERM][KB4] __attribute__((aligned (KB4)));
 
 /* Port read functions */
 /* Inb reads a byte and returns its value as a zero-extended 32-bit
