@@ -17,8 +17,16 @@ static uint32_t sys_time = 0;
 void rtc_init(irqaction* rtc_handler){
 
     //set control register A
-    uint32_t x = BASE_RTC_FREQ;
-    rtc_write(0, &x, 4);
+    uint32_t flags;
+    cli_and_save(flags);
+
+    // write log(freq) to the rtc
+    outb(CHOOSE_RTC_A, RTC_PORT);
+    outb((16 - BASE_RTC_LOG) | RTC_CMD_A, RTC_PORT+1);
+
+    restore_flags(flags);
+    rtc_freq = MAX_RTC_FREQ >> BASE_RTC_LOG;
+    //initialize system time rate
     tasks[INIT]->rtc_base = MAX_RTC_FREQ;
 
     //set control register B
@@ -64,7 +72,7 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
 
     // find log(freq)
     uint32_t logf = 0;
-    while ((!(freq & 1)) && logf < 10) {
+    while (!(freq & 1)) {
         freq >>= 1;
         logf++;
     }
@@ -74,18 +82,19 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
         return -1;
     }
     tasks[cur_task]->rtc_base = MAX_RTC_FREQ >> logf;
-    if(tasks[cur_task]->rtc_base){
+    if(tasks[cur_task]->rtc_base < rtc_freq){
         rtc_freq = tasks[cur_task]->rtc_base;
+        // disable interrupts while writing to the rtc
+        uint32_t flags;
+        cli_and_save(flags);
+
+        // write log(freq) to the rtc
+        outb(CHOOSE_RTC_A, RTC_PORT);
+        outb((16 - logf) | RTC_CMD_A, RTC_PORT+1);
+
+        restore_flags(flags);
     }
-    // disable interrupts while writing to the rtc
-    uint32_t flags;
-    cli_and_save(flags);
 
-    // write log(freq) to the rtc
-    outb(CHOOSE_RTC_A, RTC_PORT);
-    outb((16 - logf) | RTC_CMD_A, RTC_PORT+1);
-
-    restore_flags(flags);
     return 0;
 }
 
@@ -101,10 +110,6 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     if(nbytes < 4) {
         return -1;
     }
-
-    // Translate the frequency and write it to the buf
-
-
     // loop until RTC interrupt
     tasks[cur_task]->rtc_counter = tasks[cur_task]->rtc_base;
 
@@ -157,7 +162,7 @@ void update_time(uint32_t reset){
             SET_SIGNAL(task, ALARM);
         }
     }
-    if(reset){
+    if(reset){ //reset the rtc to the default rate if possible
         uint32_t flags;
         cli_and_save(flags);
 
@@ -189,7 +194,7 @@ void do_rtc_irq(int dev_id) {
     }
 
     if(!tasks[INIT]->rtc_counter){
-        update_time(!num_open);
+        update_time(!num_open && rtc_freq != (MAX_RTC_FREQ >> BASE_RTC_LOG));
     }
     // read port C to acknowledge the interrupt
     outb(CHOOSE_RTC_C, RTC_PORT);

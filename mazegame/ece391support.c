@@ -4,9 +4,7 @@
 #include "ece391syscall.h"
 
 uint32_t get_time(){
-    uint32_t data;
-    time(&data);
-    return data;
+    return time();
 }
 uint32_t strlen(const uint8_t* s)
 {

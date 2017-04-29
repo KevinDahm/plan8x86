@@ -349,20 +349,20 @@ int32_t sys_open(const uint8_t* filename) {
         }
 
         switch (d.type) {
-            case FD_DIR:
-                if (-1 == (tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename))) {
-                    return -1;
-                }
-                tasks[cur_task]->file_descs[i].ops = &filesys_ops;
-                tasks[cur_task]->file_descs[i].flags = FD_DIR;
-                break;
-            case FD_FILE:
-                tasks[cur_task]->file_descs[i].ops = &filesys_ops;
-                tasks[cur_task]->file_descs[i].file_pos = 0;
-                tasks[cur_task]->file_descs[i].flags = FD_FILE;
-                break;
-            default:
+        case FD_DIR:
+            if (-1 == (tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename))) {
                 return -1;
+            }
+            tasks[cur_task]->file_descs[i].ops = &filesys_ops;
+            tasks[cur_task]->file_descs[i].flags = FD_DIR;
+            break;
+        case FD_FILE:
+            tasks[cur_task]->file_descs[i].ops = &filesys_ops;
+            tasks[cur_task]->file_descs[i].file_pos = 0;
+            tasks[cur_task]->file_descs[i].flags = FD_FILE;
+            break;
+        default:
+            return -1;
         }
 
         return i;
@@ -602,7 +602,6 @@ int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     return (*tasks[cur_task]->file_descs[fd].ops->stat)(fd, buf, nbytes);
 }
 
-int32_t sys_time(uint32_t* buf){
-    *buf = get_time();
-    return 0;
+uint32_t sys_time(){
+    return get_time();
 }
