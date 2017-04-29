@@ -77,27 +77,50 @@ file_desc_t file_desc_arrays[NUM_TASKS][FILE_DESCS_LENGTH];
 #define SET_THREAD(task, tid) do {tasks[task]->thread_status |= (1 << tid);} while(0)
 
 typedef struct {
+    // Can be any of TASK_EMPTY, TASK_RUNNING, TASK_SLEEPING,
+    // TASK_ZOMBIE, or TASK_WAITING_FOR_THREAD. Used to manage
+    // scheduling, threading, and creating new tasks
     int32_t status;
+    // An array of files owned by the process
     file_desc_t *file_descs;
+    // Pointers to the page directories and tables associated with this process
     uint32_t *page_directory;
     uint32_t *kernel_vid_table;
     uint32_t *usr_vid_table;
+    // ebp is used for returning to interrupted processes
     uint32_t ebp;
+    // A pointer to the kernel stack that this process should be using
     uint32_t kernel_esp;
+    // A pointer to the user stack that this process is using
+    // This is used for signals and threading to know where to
+    // push data to and maintained by backup_uesp
     uint32_t user_esp;
+    // A pointer to the arguments given to execute for retrieval by sys_getargs
     uint8_t* arg_str;
+    // The terminal this process belongs to
     uint32_t terminal;
+    // Any pending signals waiting to be delivered will have a bit set here
+    // The format is (1 << signum). Please use SET_SIGNAL, CLEAR_SIGNAL, and SIGNAL_SET
     uint32_t pending_signals;
+    // A pointer to the hardware context on the user stack put there before a signal
+    // handler is called. Used by sys_sigreturn.
     hw_context_t *sig_hw_context;
     // If thread_status is 0 this process is a regular process with no threads
     // If thread_status is 1 this process is a thread
     // If thread_status is >1 this process owns threads where each bit set in thread_status
     // corresponds to the index in tasks of the owned thread.
     uint32_t thread_status;
-    uint8_t thread_waiting;
-    uint8_t parent;
-    int32_t rtc_counter;
+    // Number of rtc interupts needed to return from rtc read
     int32_t rtc_base;
+    // counts down on each rtc interrupt until it reaches 0 at which point
+    // rtc read will return and this will get reset to rtc_base
+    int32_t rtc_counter;
+    // If a parent process is waiting for a thread to finish (after sys_thread_join is called)
+    // The tid of the thread will be here. Used by sys_halt
+    uint8_t thread_waiting;
+    // An index into tasks of the parent process
+    uint8_t parent;
+    // Whether or not signals are masked for this process.
     bool signal_mask;
 } pcb_t;
 
