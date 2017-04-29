@@ -238,23 +238,24 @@ void _kbd_do_irq(int dev_id) {
         kbd_state.col = false;
         break;
     }
-    // If buffer isn't full and a key is pressed
-    if(!buffer_full[active] && kbd_state.state & 0xFF) {
 
-        int f;
-        for (f = 0; f < NUM_TERM; f++) {
-            if (kbd_equal(kbd_state, f + F1_KEY)) {
-                update_screen(f);
-                break;
-            }
+    tasks[term_process[active]]->status = TASK_RUNNING;
+    interupt_preempt = true;
+
+    int f;
+    for (f = 0; f < NUM_TERM; f++) {
+        if (kbd_equal(kbd_state, f + F1_KEY)) {
+            update_screen(f);
+            break;
         }
+    }
 
-        tasks[term_process[active]]->status = TASK_RUNNING;
-        interupt_preempt = true;
+    if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
+        SET_SIGNAL(term_process[active], INTERRUPT);
+    } else {
+        // If buffer isn't full and a key is pressed
+        if(!buffer_full[active] && kbd_state.state & 0xFF) {
 
-        if (kbd_to_ascii(kbd_state) == 'c' && kbd_state.ctrl) {
-            SET_SIGNAL(term_process[active], INTERRUPT);
-        } else {
             // Write key to buffer
             kbd_buffer[active][write_index[active]] = kbd_state;
             // Increment write_index
@@ -269,6 +270,12 @@ void _kbd_do_irq(int dev_id) {
     e0_waiting = false;
     //Ready to read if key is pressed
     kbd_ready = true;
+}
+
+void kbd_clear() {
+    write_index[TASK_T] = 0;
+    read_index[TASK_T] = 0;
+    buffer_full[TASK_T] = false;
 }
 
 void kbd_init(irqaction* keyboard_handler) {
@@ -304,10 +311,11 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
 }
 
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
+    kbd_clear();
     nbytes = (uint32_t)nbytes > sizeof(kbd_t)*KBD_BUFFER_SIZE ? sizeof(kbd_t)*KBD_BUFFER_SIZE : nbytes;
     int32_t i = 0;
     while(i < nbytes){
-        if(read_index[TASK_T] != write_index[TASK_T]){
+        if(read_index[TASK_T] != write_index[TASK_T] || buffer_full[TASK_T] == true){
             *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
             read_index[TASK_T] = (read_index[TASK_T] + 1)%KBD_BUFFER_SIZE;
             i += sizeof(kbd_t);
