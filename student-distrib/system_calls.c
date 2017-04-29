@@ -449,6 +449,8 @@ int32_t sys_vidmap_all(uint8_t** screen_start) {
         return -1;
     }
 
+    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + 33)->userSupervisor = 1;
+
     uint32_t vid_mem = 0xA0000;
     uint8_t i = 0;
     for (i = 0; i < 32; i++) {
@@ -579,7 +581,7 @@ int32_t sys_thread_join(uint32_t tid) {
 
         reschedule();
     }
-    tasks[tid]->page_directory[34] = 2;
+    tasks[tid]->page_directory[34] = PAGE_RW;
     return 0;
 }
 
