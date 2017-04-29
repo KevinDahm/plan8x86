@@ -149,9 +149,9 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->kernel_vid_table = page_tables[cur_task][0];
     tasks[cur_task]->usr_vid_table = page_tables[cur_task][1];
 
-    memset(tasks[cur_task]->page_directory, 2, DIR_SIZE * 4);
-    memset(tasks[cur_task]->kernel_vid_table, 2, DIR_SIZE * 4);
-    memset(tasks[cur_task]->usr_vid_table, 2, DIR_SIZE * 4);
+    memset(tasks[cur_task]->page_directory, PAGE_RW, TABLE_SIZE);
+    memset(tasks[cur_task]->kernel_vid_table, PAGE_RW, TABLE_SIZE);
+    memset(tasks[cur_task]->usr_vid_table, PAGE_RW, TABLE_SIZE);
 
     setup_vid(tasks[cur_task]->page_directory, tasks[cur_task]->kernel_vid_table, 0);
     setup_vid(tasks[cur_task]->page_directory + 33, tasks[cur_task]->usr_vid_table, 1);
@@ -177,6 +177,10 @@ int32_t sys_execute(const uint8_t* command) {
     switch_page_directory(cur_task);
 
     tasks[cur_task]->file_descs = file_desc_arrays[cur_task];
+    uint32_t file_i;
+    for (file_i = 0; file_i < FILE_DESCS_LENGTH; file_i++) {
+        tasks[cur_task]->file_descs[file_i].ops = &default_ops;
+    }
 
     sys_open((uint8_t *)"/dev/stdin");
     sys_open((uint8_t *)"/dev/stdout");
@@ -268,16 +272,7 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;
     }
-    switch (tasks[cur_task]->file_descs[fd].flags) {
-    case FD_DIR:
-    case FD_FILE:
-    case FD_RTC:
-    case FD_KBD:
-    case FD_STDIN:
-        return (*tasks[cur_task]->file_descs[fd].ops->read)(fd, buf, nbytes);
-    default:
-        return -1;
-    }
+    return (*tasks[cur_task]->file_descs[fd].ops->read)(fd, buf, nbytes);
 }
 
 /* sys_write
@@ -292,13 +287,7 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;
     }
-    switch (tasks[cur_task]->file_descs[fd].flags) {
-    case FD_RTC:
-    case FD_STDOUT:
-        return (*tasks[cur_task]->file_descs[fd].ops->write)(fd, buf, nbytes);
-    default:
-        return -1;
-    }
+    return (*tasks[cur_task]->file_descs[fd].ops->write)(fd, buf, nbytes);
 }
 
 /* sys_open
@@ -329,15 +318,6 @@ int32_t sys_open(const uint8_t* filename) {
         }
     }
     if (i < FILE_DESCS_LENGTH) {
-        if (!strncmp((int8_t*)filename, "rtc", strlen("rtc"))) {
-            tasks[cur_task]->file_descs[i].ops = &rtc_ops;
-            tasks[cur_task]->file_descs[i].inode = NULL;
-            tasks[cur_task]->file_descs[i].flags = FD_RTC;
-
-            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
-            return i;
-        }
-
         if (!strncmp((int8_t*)filename, "/dev/kbd", strlen("/dev/kbd"))) {
             tasks[cur_task]->file_descs[i].ops = &kbd_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
@@ -347,30 +327,39 @@ int32_t sys_open(const uint8_t* filename) {
             return i;
         }
 
+        dentry_t d;
+        if (read_dentry_by_name((int8_t*)filename, &d) != 0) {
+            return -1;
+        }
+
+        if (d.type == 0) {
+            tasks[cur_task]->file_descs[i].ops = &rtc_ops;
+            tasks[cur_task]->file_descs[i].inode = NULL;
+            tasks[cur_task]->file_descs[i].flags = FD_RTC;
+            tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
+            return i;
+        }
+
         tasks[cur_task]->file_descs[i].inode = (*filesys_ops.open)((int8_t*)filename);
         if (tasks[cur_task]->file_descs[i].inode == -1) {
             return -1;
         }
-        dentry_t d;
-        if (read_dentry_by_name((int8_t*)filename, &d) == 0) {
 
-            tasks[cur_task]->file_descs[i].ops = &filesys_ops;
-            switch (d.type) {
+        switch (d.type) {
             case FD_DIR:
                 if (-1 == (tasks[cur_task]->file_descs[i].file_pos = get_index((int8_t*)filename))) {
                     return -1;
                 }
+                tasks[cur_task]->file_descs[i].ops = &filesys_ops;
                 tasks[cur_task]->file_descs[i].flags = FD_DIR;
                 break;
             case FD_FILE:
+                tasks[cur_task]->file_descs[i].ops = &filesys_ops;
                 tasks[cur_task]->file_descs[i].file_pos = 0;
                 tasks[cur_task]->file_descs[i].flags = FD_FILE;
                 break;
             default:
                 return -1;
-            }
-        } else {
-            return -1;
         }
 
         return i;
@@ -412,6 +401,13 @@ int32_t sys_vidmap(uint8_t** screen_start) {
     if ((uint32_t)screen_start < TASK_ADDR || (uint32_t)screen_start >= (TASK_ADDR + MB4)) {
         return -1;
     }
+
+    // Give the user program permission to use video memory
+    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + 33)->userSupervisor = 1;
+    ((page_table_kb_entry_t*)tasks[cur_task]->usr_vid_table)->userSupervisor = 1;
+
+    // Flush the TLB
+    switch_page_directory(cur_task);
 
     *screen_start = (uint8_t *)(TASK_ADDR + MB4);
 
@@ -588,13 +584,10 @@ int32_t sys_thread_join(uint32_t tid) {
 }
 
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
-    switch (tasks[cur_task]->file_descs[fd].flags) {
-    case FD_FILE:
-    case FD_DIR:
-        return (*tasks[cur_task]->file_descs[fd].ops->stat)(fd, buf, nbytes);
-    default:
+    if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;
     }
+    return (*tasks[cur_task]->file_descs[fd].ops->stat)(fd, buf, nbytes);
 }
 
 int32_t sys_time(uint32_t* buf){

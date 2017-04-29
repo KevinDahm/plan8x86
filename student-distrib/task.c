@@ -5,6 +5,26 @@
 
 uint8_t cur_task = INIT;
 
+int32_t default_open(const int8_t *buf) {
+    return -1;
+}
+
+int32_t default_close(int32_t fd) {
+    return -1;
+}
+
+int32_t default_read(int32_t fd, void *buf, int32_t nbytes) {
+    return -1;
+}
+
+int32_t default_write(int32_t fd, const void *buf, int32_t nbytes) {
+    return -1;
+}
+
+int32_t default_stat(int32_t fd, void *buf, int32_t nbytes) {
+    return -1;
+}
+
 /* setup_kernel_mem
  * Description: Sets up a 4KB page mapping to video memory
  * Input:  dir - A pointer to a page directory entry to fill out
@@ -23,7 +43,7 @@ void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv) {
     vid_table->accessed = 0;
     vid_table->cacheDisabled = 0;
     vid_table->writeThrough = 1; //1 for fun
-    vid_table->userSupervisor = priv;
+    vid_table->userSupervisor = 0;
     vid_table->readWrite = 1;    //Write enabled
     vid_table->present = 1;
 
@@ -41,7 +61,7 @@ void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv) {
     vid_entry->accessed = 0;
     vid_entry->cacheDisabled = 0;
     vid_entry->writeThrough = 1;  //1 for fun
-    vid_entry->userSupervisor = priv;
+    vid_entry->userSupervisor = 0;
     vid_entry->readWrite = 1;     //Write enabled
     vid_entry->present = 1;
 }
@@ -101,6 +121,11 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
  * Side Effects: Fills the tasks array.
  */
 void create_init() {
+    default_ops.open = default_open;
+    default_ops.close = default_close;
+    default_ops.read = default_read;
+    default_ops.write = default_write;
+    default_ops.stat = default_stat;
 
     memset(signal_handlers, 0, sizeof(signal_handlers));
 
@@ -114,12 +139,18 @@ void create_init() {
     tasks[INIT]->page_directory = page_directory_tables[INIT];
     tasks[INIT]->kernel_vid_table = page_tables[INIT][0];
 
-    memset(tasks[INIT]->page_directory, 2, DIR_SIZE * 4);
-    memset(tasks[INIT]->kernel_vid_table, 2, DIR_SIZE * 4);
+    memset(tasks[INIT]->page_directory, PAGE_RW, TABLE_SIZE);
+    memset(tasks[INIT]->kernel_vid_table, PAGE_RW, TABLE_SIZE);
 
     setup_vid(tasks[INIT]->page_directory, tasks[INIT]->kernel_vid_table, 0);
 
     setup_kernel_mem(tasks[INIT]->page_directory + 1);
+
+    tasks[INIT]->file_descs = file_desc_arrays[INIT];
+    uint32_t file_i;
+    for (file_i = 0; file_i < FILE_DESCS_LENGTH; file_i++) {
+        tasks[INIT]->file_descs[file_i].ops = &default_ops;
+    }
 
     uint32_t task;
     for (task = 1; task < NUM_TASKS; task++) {
@@ -132,9 +163,9 @@ void create_init() {
         tasks[task]->kernel_vid_table = page_tables[task][0];
         tasks[task]->usr_vid_table = page_tables[task][1];
 
-        memset(tasks[task]->page_directory, 2, DIR_SIZE * 4);
-        memset(tasks[task]->kernel_vid_table, 2, DIR_SIZE * 4);
-        memset(tasks[task]->usr_vid_table, 2, DIR_SIZE * 4);
+        memset(tasks[task]->page_directory, PAGE_RW, TABLE_SIZE);
+        memset(tasks[task]->kernel_vid_table, PAGE_RW, TABLE_SIZE);
+        memset(tasks[task]->usr_vid_table, PAGE_RW, TABLE_SIZE);
 
         setup_vid(tasks[task]->page_directory, tasks[task]->kernel_vid_table, 0);
         setup_vid(tasks[task]->page_directory + 33, tasks[task]->usr_vid_table, 1);
@@ -144,6 +175,12 @@ void create_init() {
 
         // 32 * 4MB for virtual address of 128MB
         setup_task_mem(tasks[task]->page_directory + 32, task);
+
+        tasks[task]->file_descs = file_desc_arrays[task];
+        uint32_t file_i;
+        for (file_i = 0; file_i < FILE_DESCS_LENGTH; file_i++) {
+            tasks[task]->file_descs[file_i].ops = &default_ops;
+        }
     }
 
     cur_task = 0;

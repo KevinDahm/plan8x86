@@ -4,6 +4,8 @@
 #include "task.h"
 
 #define DIR_SIZE 1024
+#define TABLE_SIZE (DIR_SIZE * 4)
+#define PAGE_RW 2
 #define VIDEO   0x000B8000
 #define KERNEL  0x00400000
 #define MB 0x00100000

@@ -12,6 +12,12 @@ void setup_task_mem(uint32_t *dir, uint32_t task);
 #define FILE_DESCS_LENGTH 8
 #define NUM_TASKS 10
 
+int32_t default_open(const int8_t *buf);
+int32_t default_close(int32_t fd);
+int32_t default_read(int32_t fd, void *buf, int32_t nbytes);
+int32_t default_write(int32_t fd, const void *buf, int32_t nbytes);
+int32_t default_stat(int32_t fd, void *buf, int32_t nbytes);
+
 typedef struct file_ops {
     int32_t (*open)(const int8_t*);
     int32_t (*close)(int32_t);
@@ -20,15 +26,17 @@ typedef struct file_ops {
     int32_t (*stat)(int32_t, void*, int32_t);
 } file_ops_t;
 
+file_ops_t default_ops;
+
 file_ops_t filesys_ops;
 
 
 #define FD_CLEAR 0
+#define FD_RTC 5
 #define FD_DIR 1
 #define FD_FILE 2
 #define FD_STDIN 3
 #define FD_STDOUT 4
-#define FD_RTC 5
 #define FD_KBD 6
 
 typedef struct file_desc {
@@ -41,8 +49,8 @@ typedef struct file_desc {
 #define TASK_EMPTY 0
 #define TASK_RUNNING 1
 #define TASK_SLEEPING 2
-#define TASK_ZOMBIE 4
-#define TASK_WAITING_FOR_THREAD 5
+#define TASK_ZOMBIE 3
+#define TASK_WAITING_FOR_THREAD 4
 
 enum signals {
     DIV_ZERO = 0,
