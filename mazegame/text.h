@@ -40,20 +40,9 @@
 #define FONT_WIDTH   8
 #define FONT_HEIGHT 16
 
+
 /* Standard VGA text font. */
 extern unsigned char font_data[256][FONT_HEIGHT];
-
-/*
- * create_bitmap_from_string
- *   DESCRIPTION: Turns an ascii string into pixel data
- *   INPUTS: buf - A buffer to write pixel data into. Must be strlen(str) * FONT_HEIGHT * FONT_WIDTH in size. Does not do any error checking
- *           str - An ascii string to turn into pixels
- *           fg  - The forground color
- *           bg  - The background color
- *   OUTPUTS: none
- *   RETURN VALUE: Returns 0 on success.
- *   SIDE EFFECTS: draws into the buffer buf
- */
-int create_bitmap_from_string(unsigned char *buf, const unsigned char *str, int length, unsigned char fg, unsigned char bg);
-
+/*Convert str to a VGA text buffer status*/
+extern void string_to_buffer(char* str, unsigned char* status, int length, int buf_size);
 #endif /* TEXT_H */

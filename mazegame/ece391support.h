@@ -16,7 +16,9 @@ extern void* memset_dword(void* s, int32_t c, uint32_t n);
 extern void* memcpy(void* dest, const void* src, uint32_t n);
 extern void* memmove(void* dest, const void* src, uint32_t n);
 
+extern int32_t snprintf(int8_t* buf, int length, int8_t *format, ...);
+uint32_t get_time();
+
 #define NULL 0
 
 #endif /* ECE391SUPPORT_H */
-

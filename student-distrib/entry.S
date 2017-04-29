@@ -4,7 +4,7 @@ unknown_string:
 shell_str:
   .ascii "shell"
 system_calls_jumptable:
-  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_vidmap_all, sys_ioperm, sys_thread_create, sys_thread_join
+  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_vidmap_all, sys_ioperm, sys_thread_create, sys_thread_join, sys_time
 
   .text
 
@@ -53,28 +53,66 @@ ignore_int:
 
 common_interupt:
   SAVE_ALL
+ 	pushl %eax
+  pushl %ecx
+  pushl %edx
+  pushl %esp
+  add $12, (%esp)
+  call backup_uesp
+  addl $4, %esp
+  popl %edx
+  popl %ecx
+  popl %eax
   movl %esp, %ecx
   call do_IRQ
-  RESTORE_ALL
+  pushl %esp
+  call check_for_signals
   addl $4, %esp
+  RESTORE_ALL
+  addl $8, %esp
   iret
 
 common_exception:
   SAVE_ALL
+  pushl %eax
+  pushl %ecx
+  pushl %edx
+  pushl %esp
+  add $12, (%esp)
+  call backup_uesp
+  addl $4, %esp
+  popl %edx
+  popl %ecx
+  popl %eax
   movl 40(%esp), %eax
   movl 44(%esp), %ecx
   pushl %ecx
   pushl %esp
-  addl $8, (%esp)
+  addl $4, (%esp)
   call *%eax
   addl $8, %esp
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
   addl $8, %esp
   iret
 
 .global system_call
 system_call:
+  pushl $0
+  pushl $0
   SAVE_ALL
+  pushl %eax
+  pushl %ecx
+  pushl %edx
+  pushl %esp
+  add $12, (%esp)
+  call backup_uesp
+  addl $4, %esp
+  popl %edx
+  popl %ecx
+  popl %eax
   movl $0, %esi
   cmp %eax, %esi
   je sys_call_err
@@ -87,80 +125,109 @@ system_call:
   call *system_calls_jumptable(, %eax, 4)
   addl $12, %esp
   movl %eax, 24(%esp) # Kludge to make sure the return value gets out
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
+  addl $8, %esp
   iret
 
 sys_call_err:
   movl $-1, 24(%esp)
   RESTORE_ALL
+  addl $8, %esp
   iret
 
 
 .globl irq_0x0
 irq_0x0:
+  pushl $0
+  pushl $0
   SAVE_ALL
+  pushl %esp
+  call backup_uesp
+  addl $4, %esp
   call schedule
+  pushl %esp
+  call check_for_signals
+  addl $4, %esp
   RESTORE_ALL
+  add $8, %esp
   iret
 
 .globl irq_0x1
 irq_0x1:
+  pushl $0
   pushl $0xFFFFFFFE
   jmp common_interupt
 .globl irq_0x2
 irq_0x2:
+  pushl $0
   pushl $0xFFFFFFFD
   jmp common_interupt
 .globl irq_0x3
 irq_0x3:
+  pushl $0
   pushl $0xFFFFFFFC
   jmp common_interupt
 .globl irq_0x4
 irq_0x4:
+  pushl $0
   pushl $0xFFFFFFFB
   jmp common_interupt
 .globl irq_0x5
 irq_0x5:
+  pushl $0
   pushl $0xFFFFFFFA
   jmp common_interupt
 .globl irq_0x6
 irq_0x6:
+  pushl $0
   pushl $0xFFFFFFF9
   jmp common_interupt
 .globl irq_0x7
 irq_0x7:
+  pushl $0
   pushl $0xFFFFFFF8
   jmp common_interupt
 .globl irq_0x8
 irq_0x8:
+  pushl $0
   pushl $0xFFFFFFF7
   jmp common_interupt
 .globl irq_0x9
 irq_0x9:
+  pushl $0
   pushl $0xFFFFFFF6
   jmp common_interupt
 .globl irq_0xA
 irq_0xA:
+  pushl $0
   pushl $0xFFFFFFF5
   jmp common_interupt
 .globl irq_0xB
 irq_0xB:
+  pushl $0
   pushl $0xFFFFFFF4
   jmp common_interupt
 .globl irq_0xC
 irq_0xC:
+  pushl $0
   pushl $0xFFFFFFF3
   jmp common_interupt
 .globl irq_0xD
 irq_0xD:
+  pushl $0
   pushl $0xFFFFFFF2
   jmp common_interupt
 .globl irq_0xE
 irq_0xE:
+  pushl $0
   pushl $0xFFFFFFF1
   jmp common_interupt
 .globl irq_0xF
 irq_0xF:
+  pushl $0
   pushl $0xFFFFFFF0
   jmp common_interupt
 

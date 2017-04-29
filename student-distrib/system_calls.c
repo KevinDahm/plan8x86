@@ -10,13 +10,6 @@
 #include "task.h"
 #include "schedule.h"
 
-// This is black magic. Be careful. Don't touch this.
-// This allows me to insert constants into to strings
-// See the end of sys_execute.
-#define st(a) #a
-#define str(a) st(a)
-
-
 bool backup_init_ebp = true;
 
 
@@ -70,6 +63,8 @@ sys_halt_return:
     tasks[cur_task]->status = TASK_RUNNING;
 
     switch_page_directory(cur_task);
+
+    memset(signal_handlers[cur_task], 0, sizeof(signal_handlers[cur_task]));
 
     if (cur_task == INIT) {
         tasks[INIT]->terminal = term;
@@ -143,8 +138,10 @@ int32_t sys_execute(const uint8_t* command) {
 
     tasks[cur_task]->thread_status = 0;
     tasks[cur_task]->thread_waiting = 0;
-    tasks[cur_task]->rtc_flag = false;
+    tasks[cur_task]->rtc_counter = 0;
+    tasks[cur_task]->rtc_base = 512;
     tasks[cur_task]->pending_signals = 0;
+    tasks[cur_task]->signal_mask = false;
 
     memset(signal_handlers[cur_task], 0, sizeof(signal_handlers[cur_task]));
 
@@ -231,7 +228,7 @@ int32_t sys_execute(const uint8_t* command) {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    uint32_t user_stack_addr = TASK_ADDR + MB4;
+    tasks[cur_task]->user_esp = TASK_ADDR + MB4;
 
     // Setup an iret context on the stack with user CS and DS,
     // an EIP of start and an ESP of user_stack_addr
@@ -255,7 +252,7 @@ int32_t sys_execute(const uint8_t* command) {
     iret                                       \n\
     "
                  :
-                 : "b"(start), "c"(user_stack_addr));
+                 : "b"(start), "c"(tasks[cur_task]->user_esp));
     return 0;
 }
 
@@ -336,7 +333,6 @@ int32_t sys_open(const uint8_t* filename) {
             tasks[cur_task]->file_descs[i].ops = &rtc_ops;
             tasks[cur_task]->file_descs[i].inode = NULL;
             tasks[cur_task]->file_descs[i].flags = FD_RTC;
-            tasks[cur_task]->rtc_flag = false;
 
             tasks[cur_task]->file_descs[i].ops->open((int8_t*)filename);
             return i;
@@ -423,11 +419,33 @@ int32_t sys_vidmap(uint8_t** screen_start) {
 }
 
 int32_t sys_set_handler(int32_t signum, void* handler_address) {
-    return -1;
+    if ((uint32_t)handler_address < TASK_ADDR || (uint32_t)handler_address >= (TASK_ADDR + MB4)) {
+        return -1;
+    }
+    signal_handlers[cur_task][signum] = handler_address;
+    return 0;
 }
 
 int32_t sys_sigreturn(void) {
-    return -1;
+    tasks[cur_task]->signal_mask = false;
+
+    if (tasks[cur_task]->sig_hw_context->iret_context.cs == KERNEL_CS) {
+        hw_context_t *hw_context = (hw_context_t *)(tasks[cur_task]->ebp + 12);
+        tss.esp0 = tasks[cur_task]->kernel_esp;
+        memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t) - 8);
+        uint32_t ebp = tasks[cur_task]->ebp;
+        asm volatile("movl %0, %%ebp; leave; ret;"
+                     : : "b"(ebp));
+    } else {
+        uint32_t ebp;
+        asm volatile("movl %%ebp, %0;" : "=r"(ebp) :);
+        hw_context_t *hw_context = (hw_context_t *)(ebp + 20);
+        memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t));
+        return hw_context->eax;
+    }
+
+    // Stifle errors
+    return 0;
 }
 
 int32_t sys_vidmap_all(uint8_t** screen_start) {
@@ -465,7 +483,7 @@ int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
     // TODO: Use the TSS to avoid giving permisions for all ports
     uint32_t *ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
-    ebp[17] |= 0x3000;
+    ebp[19] |= 0x3000;
 
     return 0;
 }
@@ -498,7 +516,8 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     memcpy(tasks[task_num]->kernel_vid_table, tasks[cur_task]->kernel_vid_table, DIR_SIZE * 4);
     tasks[task_num]->arg_str = NULL;
     tasks[task_num]->terminal = tasks[cur_task]->terminal;
-    tasks[task_num]->rtc_flag = false;
+    tasks[task_num]->rtc_counter = 0;
+    tasks[task_num]->rtc_base = tasks[cur_task]->rtc_base;
     tasks[task_num]->parent = cur_task;
     *tid = task_num;
     SET_THREAD(cur_task, task_num);
@@ -529,6 +548,8 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     uint32_t return_addr = (uint32_t)uesp;
     uesp -= 5;
     *(uint32_t *)uesp = return_addr;
+
+    tasks[cur_task]->user_esp = (uint32_t)uesp;
 
     asm volatile("                             \n\
     movw $" str(USER_DS) ", %%ax               \n\
@@ -574,4 +595,9 @@ int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     default:
         return -1;
     }
+}
+
+int32_t sys_time(uint32_t* buf){
+    *buf = get_time();
+    return 0;
 }

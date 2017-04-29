@@ -22,8 +22,6 @@ static int cur_p = 0;
 // ~15ms time slices
 #define HIGH_FREQ_BYTE 75
 
-static bool dont_send_eoi = false;
-
 void reschedule() {
     cli();
 
@@ -32,15 +30,21 @@ void reschedule() {
 
     sti();
 
-    dont_send_eoi = true;
-
     asm volatile("int $0x20;");
+}
+
+void backup_uesp(hw_context_t *hw_context) {
+    if (hw_context->iret_context.eip >= TASK_ADDR) {
+        tasks[cur_task]->user_esp = hw_context->iret_context.esp;
+    }
 }
 
 void schedule() {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
     tasks[cur_task]->ebp = ebp;
+
+    send_eoi(0);
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -67,20 +71,11 @@ void schedule() {
 
     tss.esp0 = tasks[cur_task]->kernel_esp;
 
-    if (tasks[cur_task]->pending_signals != 0) {
-        handle_signals();
-    } else {
-        ebp = tasks[cur_task]->ebp;
-        asm volatile("movl %0, %%ebp \n" : : "r"(ebp));
+    ebp = tasks[cur_task]->ebp;
+    asm volatile("movl %0, %%ebp;" : : "r"(ebp));
 
-        if (dont_send_eoi) {
-            dont_send_eoi = false;
-        } else {
-            send_eoi(0);
-        }
-        // GCC compiles this function with no leave call. Thus the ebp becomes useless.
-        asm volatile("leave; ret;" : :);
-    }
+    // GCC compiles this function with no leave call. Thus the ebp becomes useless.
+    asm volatile("leave; ret;" : :);
 }
 
 void pit_init(){

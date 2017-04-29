@@ -562,32 +562,29 @@ unsigned char font_data[256][FONT_HEIGHT] = {
      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
 
+
+
 /*
- * create_bitmap_from_string
- *   DESCRIPTION: Turns an ascii string into pixel data
- *   INPUTS: buf - A buffer to write pixel data into. Must be strlen(str) * FONT_HEIGHT * FONT_WIDTH in size. Does not do any error checking
- *           str - An ascii string to turn into pixels
- *           fg  - The forground color
- *           bg  - The background color
- *   OUTPUTS: none
- *   RETURN VALUE: Returns 0 on success.
- *   SIDE EFFECTS: draws into the buffer buf
+ *  string_to_buffer
+ *   DESCRIPTION: Write str to the buffer status as a mask
+ *   INPUTS: str -- string to be drawn
+ *           status -- buffer to draw to, of height 18
+ *           length -- length of str
+ *           buf_size - Length of the buffer
+ *   OUTPUTS: status -- mask with left aligned str and garbage after
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: none
+ *
  */
-int create_bitmap_from_string(unsigned char *buf, const unsigned char * str, int length, unsigned char fg, unsigned char bg) {
-    int r, c;
-    int l = 0;
-    while (str && *str && l < length){
-        unsigned char *d = font_data[*str];
-        for (r = 0; r < FONT_HEIGHT; r++) {
-            unsigned char line = d[r];
-            for (c = 0; c < FONT_WIDTH; c++) {
-                // If bit FONT_WIDTH - j is set write fg into buffer, otherwise write bg into buffer
-                buf[r * FONT_WIDTH * length + c + l * FONT_WIDTH] = (((line & (1 << (FONT_WIDTH - 1 - c)))) == 0) ? bg : fg;
+void string_to_buffer(char* str, unsigned char* status, int length, int buf_size){
+    int i;
+    int k;
+    int j;
+    for(i = 0; i < length; i++){
+        for(j = 0; j < FONT_HEIGHT; j++){
+            for(k = 0; k < FONT_WIDTH; k++){
+                status[(j+1)*buf_size + i*FONT_WIDTH + k] = (font_data[(int)str[i]][j] & (1 << (8-k)));
             }
         }
-        str++;
-        l++;
     }
-
-    return 0;
 }

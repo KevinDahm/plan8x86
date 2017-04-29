@@ -35,44 +35,44 @@ void handle_exception(int8_t *exc_str, uint32_t err_val) {
     } else {
         printf("\n%s ", exc_str);
         printf("0x%#x\n", err_val);
-        sys_halt(256);
+        SET_SIGNAL(cur_task, SEGFAULT);
     }
 }
 
 
-void do_debug(const struct pt_regs* regs) { handle_exception("debug", regs->eip); }
-void do_nmi(const struct pt_regs* regs) { handle_exception("nmi", regs->eip); }
-void do_int3(const struct pt_regs* regs) { handle_exception("int3", regs->eip); }
-void do_overflow(const struct pt_regs* regs) { handle_exception("overflow", regs->eip); }
-void do_bounds(const struct pt_regs* regs) { handle_exception("bounds", regs->eip); }
-void do_invalid_op(const struct pt_regs* regs) { handle_exception("invalid_op", regs->eip); }
-void do_device_not_available(const struct pt_regs* regs) { handle_exception("device_not_available", regs->eip); }
-void do_double_fault(const struct pt_regs* regs, uint32_t error) { handle_exception("double fau", regs->eip); }
-void do_coprocessor_segment_overrun(const struct pt_regs* regs) { handle_exception("coprocessor_segment_overrun", regs->eip); }
-void do_invalid_TSS(const struct pt_regs* regs, uint32_t error) { handle_exception("invalid_TSS", regs->eip); }
-void do_segment_not_present(const struct pt_regs* regs, uint32_t error) { handle_exception("segment_not_present", regs->eip); }
-void do_stack_segment(const struct pt_regs* regs, uint32_t error) { handle_exception("stack_segment", regs->eip); }
-void do_general_protection(const struct pt_regs* regs, uint32_t error) { handle_exception("general_protection", regs->eip); }
-void do_coprocessor_error(const struct pt_regs* regs) { handle_exception("coprocessor_error", regs->eip); }
-void do_alignment_check(const struct pt_regs* regs, uint32_t error) { handle_exception("alignment_check", regs->eip); }
-void do_machine_check(const struct pt_regs* regs) { handle_exception("machine_check", regs->eip); }
-void do_simd_coprocessor_error(const struct pt_regs* regs) { handle_exception("simd_coprocessor_error", regs->eip); }
+void do_debug(hw_context_t* hw_context) { handle_exception("debug", hw_context->iret_context.eip); }
+void do_nmi(hw_context_t* hw_context) { handle_exception("nmi", hw_context->iret_context.eip); }
+void do_int3(hw_context_t* hw_context) { handle_exception("int3", hw_context->iret_context.eip); }
+void do_overflow(hw_context_t* hw_context) { handle_exception("overflow", hw_context->iret_context.eip); }
+void do_bounds(hw_context_t* hw_context) { handle_exception("bounds", hw_context->iret_context.eip); }
+void do_invalid_op(hw_context_t* hw_context) { handle_exception("invalid_op", hw_context->iret_context.eip); }
+void do_device_not_available(hw_context_t* hw_context) { handle_exception("device_not_available", hw_context->iret_context.eip); }
+void do_double_fault(hw_context_t* hw_context, uint32_t error) { handle_exception("double fau", hw_context->iret_context.eip); }
+void do_coprocessor_segment_overrun(hw_context_t* hw_context) { handle_exception("coprocessor_segment_overrun", hw_context->iret_context.eip); }
+void do_invalid_TSS(hw_context_t* hw_context, uint32_t error) { handle_exception("invalid_TSS", hw_context->iret_context.eip); }
+void do_segment_not_present(hw_context_t* hw_context, uint32_t error) { handle_exception("segment_not_present", hw_context->iret_context.eip); }
+void do_stack_segment(hw_context_t* hw_context, uint32_t error) { handle_exception("stack_segment", hw_context->iret_context.eip); }
+void do_general_protection(hw_context_t* hw_context, uint32_t error) { handle_exception("general_protection", hw_context->iret_context.eip); }
+void do_coprocessor_error(hw_context_t* hw_context) { handle_exception("coprocessor_error", hw_context->iret_context.eip); }
+void do_alignment_check(hw_context_t* hw_context, uint32_t error) { handle_exception("alignment_check", hw_context->iret_context.eip); }
+void do_machine_check(hw_context_t* hw_context) { handle_exception("machine_check", hw_context->iret_context.eip); }
+void do_simd_coprocessor_error(hw_context_t* hw_context) { handle_exception("simd_coprocessor_error", hw_context->iret_context.eip); }
 
-void do_divide_error(const struct pt_regs* regs) {
+void do_divide_error(hw_context_t* hw_context) {
     if(cur_task == 0) {
         blue_screen();
         set_cursor(34, 11);
         printf("divide error\n");
         set_cursor(35, 12);
-        printf("0x%#x", regs->eip);
+        printf("0x%#x", hw_context->iret_context.eip);
         hang();
     } else {
         printf("\ndivide error ");
-        printf("0x%#x\n", regs->eip);
-        sys_halt(256);
+        printf("0x%#x\n", hw_context->iret_context.eip);
+        SET_SIGNAL(cur_task, DIV_ZERO);
     }
 }
-void do_page_fault(const struct pt_regs* regs, uint32_t error) {
+void do_page_fault(hw_context_t* hw_context, uint32_t error) {
     uint32_t cr2;
     asm volatile("movl %%cr2, %0;"
                  : "=r"(cr2)
@@ -106,11 +106,11 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
     }
 
     printf("caused by address: 0x%x\n", cr2);
-    printf("on EIP: 0x%x\n", regs->eip);
+    printf("on EIP: 0x%x\n", hw_context->iret_context.eip);
     if (cur_task == 0) {
         hang();
     } else {
-        sys_halt(256);
+        SET_SIGNAL(cur_task, SEGFAULT);
     }
 }
 
@@ -120,13 +120,12 @@ void do_page_fault(const struct pt_regs* regs, uint32_t error) {
  * Output: none
  * Side Effects: Calls every handler in irq_descs[irq]
  */
-__attribute__((fastcall)) void do_IRQ(const struct pt_regs* regs) {
-    // TODO: Make this support threading and preempt_count. See UTLK page 213
-    int irq = ~(regs->orig_eax);
+__attribute__((fastcall)) void do_IRQ(hw_context_t* hw_context) {
+    int irq = ~(hw_context->irq_exc);
+    send_eoi(irq);
     irqaction *irq_p = irq_desc[irq];
     while (irq_p) {
         (*irq_p->handle)(irq_p->dev_id);
         irq_p = irq_p->next;
     }
-    send_eoi(irq);
 }

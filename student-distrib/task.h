@@ -2,6 +2,7 @@
 #define TASK_H_
 
 #include "types.h"
+#include "schedule.h"
 
 void create_init();
 void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv);
@@ -75,9 +76,11 @@ typedef struct {
     uint32_t *usr_vid_table;
     uint32_t ebp;
     uint32_t kernel_esp;
+    uint32_t user_esp;
     uint8_t* arg_str;
     uint32_t terminal;
     uint32_t pending_signals;
+    hw_context_t *sig_hw_context;
     // If thread_status is 0 this process is a regular process with no threads
     // If thread_status is 1 this process is a thread
     // If thread_status is >1 this process owns threads where each bit set in thread_status
@@ -85,7 +88,9 @@ typedef struct {
     uint32_t thread_status;
     uint8_t thread_waiting;
     uint8_t parent;
-    bool rtc_flag;
+    int32_t rtc_counter;
+    int32_t rtc_base;
+    bool signal_mask;
 } pcb_t;
 
 #define KERNEL_STACK_SIZE 0x8000

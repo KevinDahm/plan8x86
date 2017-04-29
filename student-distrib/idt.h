@@ -1,26 +1,9 @@
 #ifndef IDT_H
 #define IDT_H
 
-#define NR_IRQS 16
+#include "schedule.h"
 
-struct pt_regs {
-    int ebx;
-    int ecx;
-    int edx;
-    int esi;
-    int edi;
-    int ebp;
-    int eax;
-    int xds;
-    int xes;
-    int xfs;
-    int orig_eax;
-    int eip;
-    int xcs;
-    int eflags;
-    int esp;
-    int xss;
-};
+#define NR_IRQS 16
 
 struct irqaction {
     void (*handle)(int);
@@ -32,6 +15,6 @@ typedef struct irqaction irqaction;
 
 irqaction *irq_desc[NR_IRQS];
 
-__attribute__((fastcall)) extern void do_IRQ(const struct pt_regs* regs);
+__attribute__((fastcall)) extern void do_IRQ(hw_context_t* hw_context);
 
 #endif

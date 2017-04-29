@@ -1,6 +1,7 @@
 #include "task.h"
 #include "lib.h"
 #include "page.h"
+#include "rtc.h"
 
 uint8_t cur_task = INIT;
 
@@ -106,6 +107,8 @@ void create_init() {
     tasks[INIT] = &task_stacks[INIT].pcb;
     memset(tasks[INIT], 0, sizeof(pcb_t));
     tasks[INIT]->kernel_esp = (uint32_t)&task_stacks[INIT].stack_start;
+    tasks[INIT]->rtc_base = MAX_RTC_FREQ;
+    tasks[INIT]->rtc_counter = MAX_RTC_FREQ;
 
     tasks[INIT]->status = TASK_RUNNING;
     tasks[INIT]->page_directory = page_directory_tables[INIT];

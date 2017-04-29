@@ -15,7 +15,25 @@
 #define DOWN 162
 #define RIGHT 163
 #define LEFT 161
+#define STATUS_STR_LENGTH 26
 
+static unsigned char palette_colors[MAX_LEVEL][3] = {
+    {0x18, 0x18, 0x18}, {0x39, 0x0C, 0x0C},
+    {0x0F, 0x08, 0x39}, {0x0C, 0x39, 0x17},
+    {0x39, 0x20, 0x0A}, {0x0A, 0x38, 0x39},
+    {0x23, 0x0A, 0x39}, {0x39, 0x37, 0x0A},
+    {0x1F, 0x2E, 0x38}, {0x00, 0x00, 0x00},
+};
+/*String to print above player for each fruit*/
+static char *fruit_strings[NUM_FRUIT_TYPES] = {
+    "An Apple!",
+    "A Grape!",
+    "A Peach!",
+    "A Strawberry!",
+    "A Banana!",
+    "A Watermelon!",
+    "A Dew!"
+};
 /* structure used to hold game information */
 typedef struct {
     /* parameters varying by level   */
@@ -28,13 +46,20 @@ typedef struct {
 
     /* dynamic values within a level -- you may want to add more... */
     unsigned int map_x, map_y;   /* current upper left display pixel */
-    unsigned int fruit_count;
+    uint32_t start;               /*Start of current level*/
+    uint32_t last_update;         /*Last update to status bar*/
+    int player_color;           /*Current player color indexed in palette_colors*/
+    int fruits;                  /*Current number of fruit in the maze*/
+    int last_fruit;              /*last fruit for floating text*/
+    uint32_t fruit_text;          /*Time since pickup for text duration*/
 } game_info_t;
 
 static game_info_t game_info;
 
+static int draw_fruit_text(int pos_x, int pos_y, int need_undraw);
+static void set_player_color(int init);
+static void update_status_bar();
 
-static int picked_up_fruit = 0;
 
 volatile int quit_flag = 0;
 volatile int winner= 0;
@@ -43,6 +68,63 @@ int play_x, play_y, last_dir, dir;
 int move_cnt = 0;
 int fd;
 unsigned long data;
+
+static void set_player_color(int init){
+    /*Cycle player color*/
+
+    int col = init ? 0 : (game_info.player_color + 1)%MAX_LEVEL;
+    /*Set player color*/
+    set_palette_color(PLAYER_CENTER_COLOR, palette_colors[col]);
+    game_info.player_color = col;
+}
+/*
+ *  update_status_bar
+ *   DESCRIPTION: Update the status bar to reflect game state
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Writes to VGA memory
+ */
+static void update_status_bar(){
+    /*Get game state*/
+    int fruit = game_info.fruits;
+    int time = get_time() - game_info.start;
+    int lev = game_info.number;
+    /*Form appropriate string*/
+    time %= 3600;
+    char str[] = {
+        'L', 'e', 'v', 'e', 'l', ' ', lev + 0x30,
+        ' ', ' ', ' ', fruit + 0x30, ' ',
+        'F', 'r', 'u', 'i', 't', 's', ' ', ' ', ' ',
+        time/600+0x30, (time/60)%10+0x30, ':',
+        (time%60)/10+0x30, time%10+0x30, 0
+    };
+
+    /* char s = time + 0x30; */
+    show_status_bar(str, STATUS_STR_LENGTH);
+}
+/*
+ *  draw_fruit_text
+ *   DESCRIPTION: Update the status bar to reflect game state
+ *   INPUTS: pos_x, pos_y -- Location of player for centering the text
+ *           need_undraw -- Boolean to force function execution regardless of time
+ *   OUTPUTS: 1 for successful write, 0 for not written
+ *   RETURN VALUE: none
+ *   SIDE EFFECTS: Writes to the build buffer
+ */
+static int draw_fruit_text(int pos_x, int pos_y, int need_undraw){
+    /*Check if text should be drawn*/
+    if((!need_undraw && (get_time() - game_info.fruit_text) > 3) || game_info.last_fruit == 0){
+        return 0;
+    }
+    /*Get string to be drawn*/
+    char* str = fruit_strings[game_info.last_fruit-1];
+    int length = strlen((uint8_t*)str);
+    /*Draw the string*/
+    draw_text(pos_x - (length/2-1) * FONT_WIDTH, pos_y-FONT_HEIGHT, str, length);
+    return 1;
+}
+
 
 /*
  * move_up
@@ -181,12 +263,12 @@ unveil_around_player (int play_x, int play_y)
     int i, j;   /* loop indices for unveiling maze squares */
 
     /* Check for fruit at the player's position. */
-    if ((picked_up_fruit = check_for_fruit(x, y))) {
-        // If any were picked up decrement fruit_count
-        game_info.fruit_count -= 1;
-    }
+    int temp = check_for_fruit (x, y);
+    if(temp != 0)
+        game_info.last_fruit = temp;
 
-    /* Unveil spaces around the player. */
+
+/* Unveil spaces around the player. */
     for (i = -1; i < 2; i++)
         for (j = -1; j < 2; j++)
             unveil_space (x + i, y + j);
@@ -195,7 +277,7 @@ unveil_around_player (int play_x, int play_y)
     unveil_space (x, y + 2);
     unveil_space (x - 2, y);
 
-    /* Check whether the player has won the maze level. */
+/* Check whether the player has won the maze level. */
     return check_for_win (x, y);
 }
 
@@ -239,7 +321,6 @@ prepare_maze_level (int level)
 
     /* Initialize dynamic values. */
     game_info.map_x = game_info.map_y = SHOW_MIN;
-    game_info.fruit_count = game_info.initial_fruit_count;
 
     /* Create a maze. */
     if (make_maze (game_info.maze_x_dim, game_info.maze_y_dim,
@@ -275,11 +356,11 @@ static void rtc_thread() {
     int open[NUM_DIRS];
     int goto_next_level = 0;
 
-
     // Loop over levels until a level is lost or quit.
     for (level = 1; (level <= MAX_LEVEL) && (quit_flag == 0); level++)
     {
-        update_wall_color();
+        set_palette_color(WALL_FILL_COLOR, palette_colors[(level+7)%MAX_LEVEL]);
+        set_palette_color(STATUS_COLOR, palette_colors[level-1]);
         // Prepare for the level.  If we fail, just let the player win.
         if (prepare_maze_level (level) != 0)
             break;
@@ -297,28 +378,27 @@ static void rtc_thread() {
         last_dir = DIR_RIGHT;
 
         // Initialize the current direction of motion to stopped
-        /* dir = DIR_STOP; */
-        /* next_dir = DIR_STOP; */
+        dir = DIR_STOP;
+        next_dir = DIR_STOP;
 
         // Show maze around the player's original position
         (void)unveil_around_player (play_x, play_y);
 
-        draw_full_block (play_x, play_y, BLOCK_X_DIM, BLOCK_Y_DIM, get_player_block(last_dir), get_player_mask(last_dir));
+        set_player_color(1);
+        draw_player(play_x, play_y, get_player_block(last_dir), get_player_mask(last_dir));
+        //update the screen
+        update_status_bar();
         show_screen();
+        draw_player(play_x, play_y, NULL, get_player_mask(last_dir));
 
+        game_info.start = get_time();
+        game_info.last_update = get_time();
+        game_info.fruits = get_fruits();
+        game_info.last_fruit = 0;
         // get first Periodic Interrupt
+
         ret = read(fd, &data, sizeof(unsigned long));
 
-        /* clock_t initial_time = clock(); */
-        /* clock_t curr_time = clock(); */
-        /* time_t last_sec = 0; */
-
-        /* int drawn_fruit = 0; */
-        /* time_t fruit_timer_start; */
-        /* time_t fruit_timer_length = 3; */
-
-        /* time_t glow_timer_length = 1; */
-        /* time_t glow_timer_start = curr_sec; */
 
         while ((quit_flag == 0) && (goto_next_level == 0))
         {
@@ -328,7 +408,7 @@ static void rtc_thread() {
             // Update tick to keep track of time.  If we missed some
             // interrupts we want to update the player multiple times so
             // that player velocity is smooth
-            ticks = data >> 8;
+            ticks = data;
 
             total += ticks;
 
@@ -427,65 +507,26 @@ static void rtc_thread() {
                     }
                 }
             }
-            // Get the current time and increment curr_sec by the neccessary amount.
-            /* last_sec = curr_sec; */
-            /* curr_time = clock(); */
-            /* curr_sec = (curr_time - initial_time) / CLOCKS_PER_SEC; */
-
-            /* if (picked_up_fruit) { */
-            /*     drawn_fruit = picked_up_fruit; */
-            /*     fruit_timer_start = curr_sec; */
-            /*     picked_up_fruit = 0; */
-            /* } */
-
-            /* if (curr_sec > glow_timer_start + glow_timer_length) { */
-            /*     update_player_glow_color(); */
-            /*     glow_timer_start += glow_timer_length; */
-            /* } */
+            if(game_info.fruits != get_fruits()){/*Update status bar */
+                game_info.fruits = get_fruits(); /*for fruit number*/
+                update_status_bar();
+                game_info.fruit_text = get_time();
+            }
+            //Update player color and status bar time every half second
+            update_status_bar();
+            if((get_time() != game_info.last_update))
+                set_player_color(0);
+            game_info.last_update = get_time();
 
 
-            // Draw the statusbar with the new time, current level, and remaining fruit count
-            /* draw_statusbar(level, curr_sec, game_info.fruit_count); */
-            /* show_statusbar(); */
-
-            // We must draw the player before the fruit text in order for the text to appear above the player.
-            draw_full_block (play_x, play_y, BLOCK_X_DIM, BLOCK_Y_DIM, get_player_block(last_dir), get_player_mask(last_dir));
-
-            /* if (drawn_fruit) { */
-            /*     if (curr_sec > fruit_timer_start + fruit_timer_length) { */
-            /*         drawn_fruit = 0; */
-            /*     } else { */
-            /*         char *str; */
-            /*         switch (drawn_fruit) { */
-            /*         case 1: */
-            /*             str = "an apple!"; */
-            /*             break; */
-            /*         case 2: */
-            /*             str = "grapes!"; */
-            /*             break; */
-            /*         case 3: */
-            /*             str = "a peach!"; */
-            /*             break; */
-            /*         case 4: */
-            /*             str = "a strawberry!"; */
-            /*             break; */
-            /*         case 5: */
-            /*             str = "a banana!"; */
-            /*             break; */
-            /*         case 6: */
-            /*             str = "watermelon!"; */
-            /*             break; */
-            /*         case 7: */
-            /*             str = "YEAH!  DEW!"; */
-            /*             break; */
-            /*         default: */
-            /*             str = "What's that?"; */
-            /*         }; */
-            /*         draw_text_above_player(str, strlen(str), play_x, play_y); */
-            /*     } */
-            /* } */
-
+//Draw temporary objects and show the screen
+            draw_player (play_x, play_y, get_player_block(last_dir),
+                         get_player_mask(last_dir));
+            int z = draw_fruit_text(play_x, play_y, 0);
             show_screen();
+            (void)draw_fruit_text(play_x, play_y, z);
+            draw_player(play_x, play_y, NULL, get_player_mask(last_dir));
+
         }
     }
     if (quit_flag == 0) winner = 1;
@@ -538,13 +579,21 @@ static void keyboard_thread()
         }
     }
 
+    close(kbd_fd);
+
     return;
+}
+
+void exit(int signum) {
+    quit_flag = 1;
 }
 
 int main() {
     if (set_mode_X(fill_horiz_buffer, fill_vert_buffer) == -1) {
         return 1;
     }
+
+    set_handler(INTERRUPT, exit);
 
     fd = open((uint8_t *)"rtc");
     int x = 64;
@@ -562,3 +611,4 @@ int main() {
 
     return 0;
 }
+

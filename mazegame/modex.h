@@ -1,4 +1,4 @@
-/*                                    tab:8
+/*
  *
  * modex.h - header file for mode X 320x200 graphics
  *
@@ -22,15 +22,15 @@
  * THE UNIVERSITY OF ILLINOIS HAS ANY OBLIGATION TO PROVIDE MAINTENANCE,
  * SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS."
  *
- * Author:        Steve Lumetta
- * Version:        2
+ * Author:	    Steve Lumetta
+ * Version:	    2
  * Creation Date:   Thu Sep  9 23:08:21 2004
- * Filename:        modex.h
+ * Filename:	    modex.h
  * History:
- *    SL    1    Thu Sep  9 23:08:21 2004
- *        First written.
- *    SL    2    Sat Sep 12 13:35:41 2009
- *        Integrated original release back into main code base.
+ *	SL	1	Thu Sep  9 23:08:21 2004
+ *		First written.
+ *	SL	2	Sat Sep 12 13:35:41 2009
+ *		Integrated original release back into main code base.
  */
 
 #ifndef MODEX_H
@@ -49,14 +49,12 @@
  *         (addresses, characters of text, etc.)
  * Y_DIM   is a vertical screen dimension in pixels.
  */
+#define STATUS_BAR_HEIGHT 18
 #define IMAGE_X_DIM     320   /* pixels; must be divisible by 4             */
 #define IMAGE_Y_DIM     200   /* pixels                                     */
 #define IMAGE_X_WIDTH   (IMAGE_X_DIM / 4)          /* addresses (bytes)     */
-#define SCROLL_X_DIM    IMAGE_X_DIM                /* full image width      */
-#define STATUSBAR_Y_DIM (FONT_HEIGHT + 2) /* Enough space to draw text with 1 pixel above and below */
-#define STATUSBAR_X_DIM IMAGE_X_DIM       /* The statusbar takes up the entire screen's width */
-#define STATUSBAR_PLANE_SIZE (STATUSBAR_Y_DIM * STATUSBAR_X_DIM / 4)
-#define SCROLL_Y_DIM    (IMAGE_Y_DIM - STATUSBAR_Y_DIM) /* full image width      */
+#define SCROLL_X_DIM	IMAGE_X_DIM                /* full image width      */
+#define SCROLL_Y_DIM    (IMAGE_Y_DIM - STATUS_BAR_HEIGHT)                /* full image width      */
 #define SCROLL_X_WIDTH  (IMAGE_X_DIM / 4)          /* addresses (bytes)     */
 
 
@@ -113,9 +111,9 @@
 
 /* configure VGA for mode X; initializes logical view to (0,0) */
 extern int set_mode_X (void (*horiz_fill_fn)
-                            (int, int, unsigned char[SCROLL_X_DIM]),
-               void (*vert_fill_fn)
-                    (int, int, unsigned char[SCROLL_Y_DIM]));
+                       (int, int, unsigned char[SCROLL_X_DIM]),
+		       void (*vert_fill_fn)
+                       (int, int, unsigned char[SCROLL_Y_DIM]));
 
 /* return to text mode */
 extern void clear_mode_X ();
@@ -123,31 +121,30 @@ extern void clear_mode_X ();
 /* set logical view window coordinates */
 extern void set_view_window (int scr_x, int scr_y);
 
-extern void show_statusbar();
-
 /* show the logical view window on the monitor */
 extern void show_screen ();
 
 /* clear the video memory in mode X */
 extern void clear_screens ();
 
-extern int draw_statusbar(unsigned int level, unsigned int ticks, unsigned int fruit_count);
-
-extern int draw_text_above_player(const char *str, const int length, int play_x, int play_y);
-
-extern void update_player_glow_color();
-extern void update_wall_color();
 /*
  * draw a 12x12 block with upper left corner at logical position
  * (pos_x,pos_y); any part of the block outside of the logical view window
  * is clipped (cut off and not drawn)
  */
-extern void draw_full_block (int pos_x, int pos_y, int block_w, int block_h, unsigned char* blk, unsigned char* mask);
-
+extern void draw_full_block (int pos_x, int pos_y, unsigned char* blk);
+/*Draw the background over the player in the buffer*/
+extern void draw_player(int pos_x, int pos_y, unsigned char* blk, unsigned char* mask);
+/*Draw str at logical position (pos_x, pos_y), pushing onto the screen*/
+extern void draw_text(int pos_x, int pos_y,  char* str, int length);
 /* draw a horizontal line at vertical pixel y within the logical view window */
 extern int draw_horiz_line (int y);
 
 /* draw a vertical line at horizontal pixel x within the logical view window */
 extern int draw_vert_line (int x);
+/* draw the status bar with the string str */
+extern void show_status_bar(char* str, int length);
+/* change color at index to red:green:blue */
+extern void set_palette_color(unsigned char index, unsigned char* color);
 
 #endif /* MODEX_H */
