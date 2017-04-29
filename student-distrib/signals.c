@@ -7,6 +7,12 @@
 
 void check_for_signals(hw_context_t *hw_context) {
     if (tasks[cur_task]->pending_signals != 0) {
+        if (hw_context->iret_context.cs == KERNEL_CS) {
+            uint32_t ebp;
+            asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+            tasks[cur_task]->ebp = ebp;
+            tss.esp0 = ebp - 4;
+        }
         handle_signals(hw_context);
     }
 }
@@ -52,9 +58,6 @@ void handle_signals(hw_context_t *hw_context) {
                     uesp -= 1;
 
                     if (hw_context->iret_context.cs == KERNEL_CS) {
-                        uint32_t ebp;
-                        asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
-                        tss.esp0 = ebp - 4;
                         uesp -= sizeof(hw_context_t) - 8;
                         memcpy(uesp, hw_context, sizeof(hw_context_t) - 8);
                     } else {
@@ -67,8 +70,6 @@ void handle_signals(hw_context_t *hw_context) {
                     *(uint32_t *)uesp = signal;
                     uesp -= 4;
                     *(uint32_t *)uesp = return_addr;
-
-                    /* tss.esp0 = tasks[cur_task]->kernel_esp; */
 
                     asm volatile("                             \n\
                     movw $" str(USER_DS) ", %%ax               \n\

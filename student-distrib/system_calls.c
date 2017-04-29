@@ -416,21 +416,25 @@ int32_t sys_set_handler(int32_t signum, void* handler_address) {
 }
 
 int32_t sys_sigreturn(void) {
-    uint32_t ebp;
-    asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
-
     tasks[cur_task]->signal_mask = false;
-    tss.esp0 = tasks[cur_task]->kernel_esp;
-
-    hw_context_t *hw_context = (hw_context_t *)(ebp + 20);
 
     if (tasks[cur_task]->sig_hw_context->iret_context.cs == KERNEL_CS) {
+        hw_context_t *hw_context = (hw_context_t *)(tasks[cur_task]->ebp + 12);
+        tss.esp0 = tasks[cur_task]->kernel_esp;
         memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t) - 8);
+        uint32_t ebp = tasks[cur_task]->ebp;
+        asm volatile("movl %0, %%ebp; leave; ret;"
+                     : : "b"(ebp));
     } else {
+        uint32_t ebp;
+        asm volatile("movl %%ebp, %0;" : "=r"(ebp) :);
+        hw_context_t *hw_context = (hw_context_t *)(ebp + 20);
         memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t));
+        return hw_context->eax;
     }
 
-    return hw_context->eax;
+    // Stifle errors
+    return 0;
 }
 
 int32_t sys_vidmap_all(uint8_t** screen_start) {

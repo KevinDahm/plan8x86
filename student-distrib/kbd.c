@@ -314,16 +314,10 @@ int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
             buffer_full[TASK_T] = false;
         } else {
             term_process[TASK_T] = cur_task;
-            /* reschedule(); */
+            reschedule();
         }
     }
     tasks[cur_task]->status = TASK_RUNNING;
-    // TODO: This is a fix for handeling registered signals that were
-    // generated while in kernel space. The esp value is incorrect when
-    // returning from sigreturn. Signals will break if they are generated
-    // in any other part of kernel space than this while loop still.
-    // Please find a better solution than this.
-    asm volatile("movl %0, %%eax; leave; ret;" :"=r"(i) :);
     return i;
 }
 
