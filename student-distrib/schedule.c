@@ -39,10 +39,12 @@ void backup_uesp(hw_context_t *hw_context) {
     }
 }
 
-void schedule(hw_context_t *hw_context) {
+void schedule() {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
     tasks[cur_task]->ebp = ebp;
+
+    send_eoi(0);
 
     if (interupt_preempt) {
         cur_task = term_process[active];
@@ -72,7 +74,6 @@ void schedule(hw_context_t *hw_context) {
     ebp = tasks[cur_task]->ebp;
     asm volatile("movl %0, %%ebp;" : : "r"(ebp));
 
-    send_eoi(0);
     // GCC compiles this function with no leave call. Thus the ebp becomes useless.
     asm volatile("leave; ret;" : :);
 }

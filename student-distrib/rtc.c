@@ -152,7 +152,10 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
 void update_time(uint32_t reset){
     sys_time++;
     if(sys_time%10 == 0){
-        //TODO:SEND ALARM
+        uint32_t task;
+        for (task = 1; task < NUM_TASKS; task++) {
+            SET_SIGNAL(task, ALARM);
+        }
     }
     if(reset){
         uint32_t flags;
@@ -165,8 +168,6 @@ void update_time(uint32_t reset){
         restore_flags(flags);
     }
     tasks[INIT]->rtc_counter = tasks[INIT]->rtc_base;
-
-
 }
 
 uint32_t get_time(){

@@ -146,7 +146,10 @@ irq_0x0:
   SAVE_ALL
   pushl %esp
   call backup_uesp
+  addl $4, %esp
   call schedule
+  pushl %esp
+  call check_for_signals
   addl $4, %esp
   RESTORE_ALL
   add $8, %esp

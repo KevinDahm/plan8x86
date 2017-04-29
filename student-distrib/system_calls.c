@@ -64,6 +64,8 @@ sys_halt_return:
 
     switch_page_directory(cur_task);
 
+    memset(signal_handlers[cur_task], 0, sizeof(signal_handlers[cur_task]));
+
     if (cur_task == INIT) {
         tasks[INIT]->terminal = term;
         update_screen(term);
@@ -418,10 +420,16 @@ int32_t sys_sigreturn(void) {
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
 
     tasks[cur_task]->signal_mask = false;
+    tss.esp0 = tasks[cur_task]->kernel_esp;
 
     hw_context_t *hw_context = (hw_context_t *)(ebp + 20);
 
-    memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t));
+    if (tasks[cur_task]->sig_hw_context->iret_context.cs == KERNEL_CS) {
+        memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t) - 8);
+    } else {
+        memcpy(hw_context, (void*)tasks[cur_task]->sig_hw_context, sizeof(hw_context_t));
+    }
+
     return hw_context->eax;
 }
 

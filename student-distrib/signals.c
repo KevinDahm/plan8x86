@@ -3,14 +3,11 @@
 #include "system_calls.h"
 #include "lib.h"
 #include "x86_desc.h"
+#include "page.h"
 
 void check_for_signals(hw_context_t *hw_context) {
-    uint32_t task;
-    for (task = 1; task < NUM_TASKS; task++) {
-        if (tasks[task]->pending_signals != 0) {
-            cur_task = task;
-            handle_signals(hw_context, task);
-        }
+    if (tasks[cur_task]->pending_signals != 0) {
+        handle_signals(hw_context);
     }
 }
 
@@ -27,17 +24,17 @@ void handle_default_signal(int32_t signal) {
     }
 }
 
-void handle_signals(hw_context_t *hw_context, uint32_t task) {
+void handle_signals(hw_context_t *hw_context) {
     uint8_t signal;
-    if (tasks[task]->signal_mask == false) {
+    if (tasks[cur_task]->signal_mask == false) {
         for (signal = 0; signal < NUM_SIGNALS; signal++) {
-            if (SIGNAL_SET(task, signal)) {
-                CLEAR_SIGNAL(task, signal);
-                if (signal_handlers[task][signal] == NULL) {
+            if (SIGNAL_SET(cur_task, signal)) {
+                CLEAR_SIGNAL(cur_task, signal);
+                if (signal_handlers[cur_task][signal] == NULL) {
                     handle_default_signal(signal);
                 } else {
-                    tasks[task]->signal_mask = true;
-                    uint8_t *uesp = (uint8_t *)tasks[task]->user_esp - 4;
+                    tasks[cur_task]->signal_mask = true;
+                    uint8_t *uesp = (uint8_t *)tasks[cur_task]->user_esp - 4;
                     // Put the following assembly on the user stack:
                     // pushl $0xA, %eax
                     // int $0x80
@@ -54,14 +51,24 @@ void handle_signals(hw_context_t *hw_context, uint32_t task) {
                     uint32_t return_addr = (uint32_t)uesp;
                     uesp -= 1;
 
-                    uesp -= sizeof(hw_context_t);
-                    memcpy(uesp, hw_context, sizeof(hw_context_t));
-                    tasks[task]->sig_hw_context = (hw_context_t *)uesp;
+                    if (hw_context->iret_context.cs == KERNEL_CS) {
+                        uint32_t ebp;
+                        asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+                        tss.esp0 = ebp - 4;
+                        uesp -= sizeof(hw_context_t) - 8;
+                        memcpy(uesp, hw_context, sizeof(hw_context_t) - 8);
+                    } else {
+                        uesp -= sizeof(hw_context_t);
+                        memcpy(uesp, hw_context, sizeof(hw_context_t));
+                    }
+                    tasks[cur_task]->sig_hw_context = (hw_context_t *)uesp;
 
                     uesp -= 4;
                     *(uint32_t *)uesp = signal;
                     uesp -= 4;
                     *(uint32_t *)uesp = return_addr;
+
+                    /* tss.esp0 = tasks[cur_task]->kernel_esp; */
 
                     asm volatile("                             \n\
                     movw $" str(USER_DS) ", %%ax               \n\
@@ -81,7 +88,7 @@ void handle_signals(hw_context_t *hw_context, uint32_t task) {
                     iret                                       \n\
                     "
                                  :
-                                 : "b"(signal_handlers[task][signal]), "c"(uesp));
+                                 : "b"(signal_handlers[cur_task][signal]), "c"(uesp));
                 }
             }
         }

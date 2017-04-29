@@ -39,7 +39,7 @@ typedef struct {
 
 extern void backup_uesp(hw_context_t *hw_contex);
 extern void reschedule();
-extern void schedule(hw_context_t *hw_context);
+extern void schedule();
 void pit_init();
 
 #endif
