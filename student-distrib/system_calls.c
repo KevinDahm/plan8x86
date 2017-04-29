@@ -451,6 +451,7 @@ int32_t sys_vidmap_all(uint8_t** screen_start) {
 
     ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + 33)->userSupervisor = 1;
 
+    // VGA memory is mapped to addresses 0xA0000 - 0xBFFFF
     uint32_t vid_mem = 0xA0000;
     uint8_t i = 0;
     for (i = 0; i < 32; i++) {
@@ -467,7 +468,7 @@ int32_t sys_vidmap_all(uint8_t** screen_start) {
         vid_entry->readWrite = 1;     //Write enabled
         vid_entry->present = 1;
 
-        vid_mem += 0x1000;
+        vid_mem += KB4;
     }
 
     switch_page_directory(cur_task);

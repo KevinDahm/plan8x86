@@ -68,7 +68,7 @@ void update_screen(uint32_t terminal) {
     if(terminal >= NUM_TERM || terminal == active){
         return;
     }
-    memcpy(terminal_video[active], (void *)VIDEO, 0x1000);
+    memcpy(terminal_video[active], (void *)VIDEO, KB4);
 
     int i;
     for (i = 1; i < NUM_TASKS; i++) {
@@ -85,7 +85,7 @@ void update_screen(uint32_t terminal) {
 
     active = terminal;
 
-    memcpy((void *)VIDEO, terminal_video[active], 0x1000);
+    memcpy((void *)VIDEO, terminal_video[active], KB4);
 
     update_cursor();
 }

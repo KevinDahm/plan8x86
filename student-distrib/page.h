@@ -8,6 +8,8 @@
 #define PAGE_RW 2
 #define VIDEO   0x000B8000
 #define KERNEL  0x00400000
+#define KB 0x400
+#define KB4 0x1000
 #define MB 0x00100000
 #define MB4 0x00400000
 #define TASK_ADDR (128 * MB)
@@ -58,8 +60,8 @@ typedef struct __attribute__((packed)) page_table_kb_entry{
     uint32_t addr : 20;
 } page_table_kb_entry_t;
 
-uint32_t page_directory_tables[NUM_TASKS][DIR_SIZE] __attribute__((aligned (0x1000)));
-uint32_t page_tables[NUM_TASKS][2][DIR_SIZE] __attribute__((aligned (0x1000)));
+uint32_t page_directory_tables[NUM_TASKS][DIR_SIZE] __attribute__((aligned (KB4)));
+uint32_t page_tables[NUM_TASKS][2][DIR_SIZE] __attribute__((aligned (KB4)));
 
 // Sets PG, PSE, and PE flags. Moves directory address to CR3
 extern void init_paging();

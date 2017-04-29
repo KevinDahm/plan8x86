@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "schedule.h"
+#include "page.h"
 
 void video_init();
 extern int32_t printf(int8_t *format, ...);
@@ -40,7 +41,7 @@ int32_t safe_strncpy(int8_t* dest, const int8_t* src, int32_t n);
 
 void test_interrupts();
 
-int8_t terminal_video[NUM_TERM][0x1000] __attribute__((aligned (0x1000)));
+int8_t terminal_video[NUM_TERM][KB4] __attribute__((aligned (KB4)));
 
 /* Port read functions */
 /* Inb reads a byte and returns its value as a zero-extended 32-bit
