@@ -68,7 +68,6 @@ sys_halt_return:
 
     if (cur_task == INIT) {
         tasks[INIT]->terminal = term;
-        update_screen(term);
         sys_execute((uint8_t*)"shell");
     }
 

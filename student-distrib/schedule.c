@@ -46,7 +46,9 @@ void schedule() {
 
     send_eoi(0);
 
-    if (interupt_preempt) {
+    if (backup_init_ebp) {
+        cur_task = INIT;
+    } else if (interupt_preempt) {
         cur_task = term_process[active];
         interupt_preempt = false;
     } else {

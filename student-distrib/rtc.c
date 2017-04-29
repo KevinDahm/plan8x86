@@ -163,7 +163,7 @@ void update_time(uint32_t reset){
 
         // write log(freq) to the rtc
         outb(CHOOSE_RTC_A, RTC_PORT);
-        outb(15 | RTC_CMD_A, RTC_PORT+1);// 15 = 16 - log(BASE_RTC_FREQ)
+        outb((16 - BASE_RTC_LOG) | RTC_CMD_A, RTC_PORT+1);// 15 = 16 - log(BASE_RTC_FREQ)
 
         restore_flags(flags);
     }

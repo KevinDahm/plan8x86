@@ -9,7 +9,8 @@
 #define CHOOSE_RTC_A 0x8A
 #define CHOOSE_RTC_B 0x8B
 #define CHOOSE_RTC_C 0x0C
-#define BASE_RTC_FREQ 2
+#define BASE_RTC_FREQ (1 << BASE_RTC_LOG)
+#define BASE_RTC_LOG 10
 #define MAX_RTC_FREQ 1024
 #define RTC_CMD_A 0x20
 #define RTC_CMD_B 0x40
