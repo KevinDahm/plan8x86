@@ -98,7 +98,8 @@ int32_t sys_execute(const uint8_t* command) {
     cli();
 
     // Copy the command string for parsing later
-    uint8_t com_str[strlen((int8_t*)command)];
+    uint32_t command_length = strlen((int8_t*)command);
+    uint8_t com_str[command_length];
     strcpy((int8_t*)com_str, (int8_t*)command);
 
     // Once INIT starts the initial shells, don't move it's base pointer or
@@ -186,8 +187,12 @@ int32_t sys_execute(const uint8_t* command) {
     while(com_str[i] != ' ' && com_str[i] != '\0') i++;
     com_str[i] = '\0';
     i++;
-    while(com_str[i] == ' ') i++;
-    tasks[cur_task]->arg_str = com_str + i;
+    while(i < command_length && com_str[i] == ' ') i++;
+    if (i >= command_length) {
+        tasks[cur_task]->arg_str = NULL;
+    } else {
+        tasks[cur_task]->arg_str = com_str + i;
+    }
 
     // If the file cannot be found error
     if ((fd = sys_open(com_str)) == -1) {
@@ -388,7 +393,13 @@ int32_t sys_close(int32_t fd) {
 }
 
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
+    if (buf == NULL) {
+        return -1;
+    }
     uint8_t* arg = tasks[cur_task]->arg_str;
+    if (arg == NULL) {
+        return -1;
+    }
     int32_t arg_len = strlen((int8_t*)arg) + 1;
     if (nbytes < arg_len) {
         return -1;
