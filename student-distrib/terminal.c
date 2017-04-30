@@ -101,7 +101,6 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     int8_t a;
     nbytes = nbytes > KBD_BUFFER_SIZE ? KBD_BUFFER_SIZE : nbytes; //Cap line size at 128
     memset(buf, 0, nbytes);
-    // TODO: Arrow keys?
     while (true) { //Keep reading
         if (kbd_read(0, &k, 2)){ //Read a single key
             if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
@@ -110,6 +109,11 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                 total = 0;
             } else if(kbd_equal(k, BKSP_KEY)) { //Delete the previous character
                 if (total > 0) {
+                    if(((uint8_t*)buf)[total-1] == '\t'){
+                        removec();
+                        removec();
+                        removec();
+                    }
                     ((uint8_t*)buf)[total-1] = 0;
                     removec();
                     total--;

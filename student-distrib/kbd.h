@@ -44,7 +44,7 @@ extern kbd_t kbd_poll();
 extern kbd_t kbd_poll_echo();
 
 // Compares kbd_t with a bitfield (Ignores capsLock)
-extern uint8_t kbd_equal(kbd_t x, uint8_t y);
+extern bool kbd_equal(kbd_t key, uint8_t desired);
 //Convert key struct to ascii, including shift and caps lock
 extern int8_t kbd_to_ascii(kbd_t key);
 //Open keyboard - does nothing

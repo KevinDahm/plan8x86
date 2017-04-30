@@ -59,6 +59,13 @@ int8_t ascii_shift_lookup[][16] = {
 };
 #endif
 
+/* void _kbd_do_irq(int dev_id)
+ * Decription: Handler for keyboard interrupts
+ * input: int dev_id - unused
+ * output: none
+ * Side effects: Writes to the keyboard buffer. Can trigger interrupt signal
+ *               and switch terminals
+ */
 void _kbd_do_irq(int dev_id) {
     uint8_t c;
     c = inb(0x60);
@@ -272,12 +279,24 @@ void _kbd_do_irq(int dev_id) {
     kbd_ready = true;
 }
 
+/* void kbd_clear()
+ * Decription: Clears the kbd buffer of the current program
+ * input: none
+ * output: none
+ * Side effects: Writes to the kbd buffer
+ */
 void kbd_clear() {
     write_index[TASK_T] = 0;
     read_index[TASK_T] = 0;
     buffer_full[TASK_T] = false;
 }
 
+/* void kbd_init(irqaction* keyboard_handler)
+ * Decription: Clears the kbd buffer of the current program
+ * input: keyboard_handler - pointer to irqaction struct for the kbd
+ * output: none
+ * Side effects: Enables a PIC line, modifies the keyboard_handler, clears kbd buffers
+ */
 void kbd_init(irqaction* keyboard_handler) {
     keyboard_handler->handle = _kbd_do_irq;
     keyboard_handler->dev_id = 0x21;
@@ -298,37 +317,75 @@ void kbd_init(irqaction* keyboard_handler) {
     }
 }
 
+/* int32_t kbd_open(const int8_t* filename)
+ * Decription: Does nothing to open the keyboard
+ * input: filename - unused
+ * output: 0 for success
+ * Side effects: none
+ */
 int32_t kbd_open(const int8_t* filename) {
     return 0;
 }
 
+/* int32_t kbd_close(int32_t fd)
+ * Decription: Does nothing to close the keyboard
+ * input: fd - unused
+ * output: 0 for success
+ * Side effects: none
+ */
 int32_t kbd_close(int32_t fd) {
     return 0;
 }
 
+/* int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes)
+ * Decription: Fails to write to the keyboard
+ * input: fd - ignored
+ *        buf - ignored
+ *        nbytes - ignored
+ * output: -1 for failure
+ * Side effects: none
+ */
 int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
     return -1;
 }
 
+/* int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes)
+ * Decription: Reads from the keyboard
+ * input: fd - ignored
+ *        buf - buffer to write kbd_t structs
+ *        nbytes - double the number of keys desired
+ * output: number of bytes written on success, -1 for invalid input
+ * Side effects: none
+ */
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     kbd_clear();
+    if(nbytes & 1){ //fail on odd number requested
+        return -1;
+    }
     nbytes = (uint32_t)nbytes > sizeof(kbd_t)*KBD_BUFFER_SIZE ? sizeof(kbd_t)*KBD_BUFFER_SIZE : nbytes;
     int32_t i = 0;
     while(i < nbytes){
         if(read_index[TASK_T] != write_index[TASK_T] || buffer_full[TASK_T] == true){
+            //read a key from the buffer
             *((kbd_t*)buf) = kbd_buffer[TASK_T][read_index[TASK_T]];
             read_index[TASK_T] = (read_index[TASK_T] + 1)%KBD_BUFFER_SIZE;
             i += sizeof(kbd_t);
             buffer_full[TASK_T] = false;
         } else {
+            //Nothing to read, ask to be woken up and reschedule
             term_process[TASK_T] = cur_task;
             reschedule();
         }
     }
-    tasks[cur_task]->status = TASK_RUNNING;
     return i;
 }
 
+/* int8_t kbd_to_ascii(kbd_t key)
+ * Decription: Converts kbd_t to an ascii char
+ * input: key - kbd_t to be translated
+ * output: key in ascii
+ * Side effects: none
+ */
 int8_t kbd_to_ascii(kbd_t key) {
     int8_t out;
     if (!key.shift) {
@@ -349,23 +406,46 @@ int8_t kbd_to_ascii(kbd_t key) {
     return out;
 }
 
+/* void _kbd_print_ascii(kbd_t key)
+ * Decription: Prints a kbd_t to the screen in ascii
+ * input: key - kbd_t to be printed
+ * output: none
+ * Side effects: writes to video memory
+ */
 void _kbd_print_ascii(kbd_t key) {
     int8_t k = kbd_to_ascii(key);
     if (k) {
         printf("%c", k);
     }
 }
-
+/* kbd_t kbd_poll()
+ * Decription: Returns the current keyboard state
+ * input: none
+ * output: current key pressed
+ * Side effects: none
+ */
 kbd_t kbd_poll() {
     return kbd_state;
 }
 
+/* kbd_t kbd_poll_echo()
+ * Decription: Returns the current keyboard state and prints it to the screen
+ * input: none
+ * output: current key pressed
+ * Side effects: writes to video memory
+ */
 kbd_t kbd_poll_echo() {
     kbd_t key = kbd_state;
     _kbd_print_ascii(key);
     return key;
 }
 
+/* kbd_t kbd_get_echo()
+ * Decription: Waits for a key press then prints it to the screen
+ * input: none
+ * output: current key pressed
+ * Side effects: writes to video memory
+ */
 kbd_t kbd_get_echo() {
     while (!kbd_ready) {asm volatile ("hlt");}
     kbd_ready = false;
@@ -373,12 +453,25 @@ kbd_t kbd_get_echo() {
     return kbd_state;
 }
 
+/* kbd_t kbd_get()
+ * Decription: Waits for a key press then returns it
+ * input: none
+ * output: current key pressed
+ * Side effects: none
+ */
 kbd_t kbd_get() {
     while (!kbd_ready) {asm volatile ("hlt");}
     kbd_ready = false;
     return kbd_state;
 }
 
-uint8_t kbd_equal(kbd_t x, uint8_t y) {
-    return (x.state & 0xFF) == y;
+/* bool kbd_equal(kbd_t key, uint8_t desired)
+ * Decription:
+ * input: key - kbd_t to compare
+ *        desired - key to compare, in kbd_t format
+ * output: 1 for equal, otherwise 0
+ * Side effects: writes to video memory
+ */
+bool kbd_equal(kbd_t key, uint8_t desired) {
+    return (key.state & 0xFF) == desired;
 }

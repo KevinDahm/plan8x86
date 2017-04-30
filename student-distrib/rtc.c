@@ -100,9 +100,9 @@ int32_t rtc_write(int32_t fd, const void* buf, int32_t nbytes){
 
 /* int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes)
  * Decription: Gives RTC frequency and stalls for interrupt
- * input: fd - Ignored
- *        buf - pointer to write frequency
- *        nbytes - should always be 4
+ * input: fd - ignored
+ *        buf - pointer to number of RTC interrupts since function call
+ *        nbytes - size of buf, should be at least 4
  * output: -1 for invalid input, 0 for success
  * Side effects: Writes to buf, loops until RTC interrupt
  */
@@ -120,7 +120,7 @@ int32_t rtc_read(int32_t fd, void* buf, int32_t nbytes){
     return 0;
 }
 
-/* void rtc_open(const int8_t* filename)
+/* int32_t rtc_open(const int8_t* filename)
  * Decription: Opens the rtc, which currently does nothing
  * input: filename - unused, as it should be the rtc
  * output: 0 for success
@@ -131,7 +131,7 @@ int32_t rtc_open(const int8_t* filename){
     return 0;
 }
 
-/* void rtc_close(int32_t fd)
+/* int32_t rtc_close(int32_t fd)
  * Decription: Closes the rtc, which currently does nothing
  * input: fd - unused
  * output: 0 for success
@@ -142,7 +142,7 @@ int32_t rtc_close(int32_t fd){
     return 0;
 }
 
-/* void rtc_stat(int32_t fd, void* buf, int32_t nbytes)
+/* int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes)
  * Decription: Gives stats for the rtc, which currently does nothing
  * input: fd - unused
  *        buf - unused
@@ -154,7 +154,13 @@ int32_t rtc_stat(int32_t fd, void* buf, int32_t nbytes) {
     return 0;
 }
 
-void update_time(uint32_t reset){
+/* void update_time(bool reset)
+ * Decription: Updates the system time
+ * input: reset - Whether to reset the hardware RTC frequency to the base rate
+ * output: none
+ * Side effects: Updates internal system time
+ */
+void update_time(bool reset){
     sys_time++;
     if(sys_time%10 == 0){
         uint32_t task;
@@ -183,7 +189,7 @@ uint32_t get_time(){
  * Decription: Standard rtc handler
  * input: dev_id - currently unused
  * output: none
- * Side effects: Writes to video memory and the RTC
+ * Side effects: Writes to the RTC and updates time counters
  */
 void do_rtc_irq(int dev_id) {
 
