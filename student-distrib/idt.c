@@ -78,35 +78,35 @@ void do_page_fault(hw_context_t* hw_context, uint32_t error) {
                  : "=r"(cr2)
                  :);
 
-    printf("\nPage fault.\n");
+    printf("Page fault:\n");
     if (error & 0x1) {
-        printf("page-protection violation\n");
+        printf("Page-protection violation\n");
     } else {
-        printf("non-present page\n");
+        printf("Non-present page\n");
     }
 
     if (error & 0x2) {
-        printf("page write\n");
+        printf("Page write\n");
     } else {
-        printf("page read\n");
+        printf("Page read\n");
     }
 
     if (error & 0x4) {
-        printf("caused while CPL=3\n");
+        printf("Caused while CPL=3\n");
     } else {
-        printf("caused while CPL=0\n");
+        printf("Caused while CPL=0\n");
     }
 
     if (error & 0x8) {
-        printf("caused by reading a 1 in a reserved field\n");
+        printf("Caused by reading a 1 in a reserved field\n");
     }
 
     if (error & 0x10) {
-        printf("caused by an instruction fetch\n");
+        printf("Caused by an instruction fetch\n");
     }
 
-    printf("caused by address: 0x%x\n", cr2);
-    printf("on EIP: 0x%x\n", hw_context->iret_context.eip);
+    printf("Caused by address: 0x%x\n", cr2);
+    printf("On EIP: 0x%x\n", hw_context->iret_context.eip);
     if (cur_task == 0) {
         hang();
     } else {
