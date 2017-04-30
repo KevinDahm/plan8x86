@@ -2,9 +2,23 @@
 
 #include "ece391support.h"
 #include "ece391syscall.h"
-
+static uint32_t num;
 uint32_t get_time(){
     return time();
+}
+
+uint32_t srandom(uint32_t seed){
+    if(seed){
+        num = seed;
+    }else{
+        asm volatile("RDTSC; movl %%eax, %0;" : "=r"(num) : : "%eax", "%edx");
+    }
+
+}
+uint32_t random(){
+    num = (num+1)%10000;
+    return random_numbers[num];
+
 }
 uint32_t strlen(const uint8_t* s)
 {
@@ -57,18 +71,18 @@ uint8_t* itoa(uint32_t value, uint8_t* buf, int32_t radix)
     int32_t i;
     uint32_t newval = value;
 
-    /* Special case for zero */
+/* Special case for zero */
     if(value == 0) {
         buf[0]='0';
         buf[1]='\0';
         return buf;
     }
 
-    /* Go through the number one place value at a time, and add the
-     * correct digit to "newbuf".  We actually add characters to the
-     * ASCII string from lowest place value to highest, which is the
-     * opposite of how the number should be printed.  We'll reverse the
-     * characters later. */
+/* Go through the number one place value at a time, and add the
+ * correct digit to "newbuf".  We actually add characters to the
+ * ASCII string from lowest place value to highest, which is the
+ * opposite of how the number should be printed.  We'll reverse the
+ * characters later. */
     while (newval > 0) {
         i = newval % radix;
         *newbuf = lookup[i];
@@ -76,10 +90,10 @@ uint8_t* itoa(uint32_t value, uint8_t* buf, int32_t radix)
         newval /= radix;
     }
 
-    /* Add a terminating NULL */
+/* Add a terminating NULL */
     *newbuf = '\0';
 
-    /* Reverse the string and return */
+/* Reverse the string and return */
     return strrev(buf);
 }
 
@@ -291,10 +305,10 @@ uint32_t puts(int8_t* mybuf, int8_t* s){
     return index;
 }
 int32_t snprintf(int8_t* mybuf, int length, int8_t *format, ...) {
-    /* Pointer to the format string */
+/* Pointer to the format string */
     int8_t* buf = format;
     uint32_t i;
-    /* Stack pointer for the other parameters */
+/* Stack pointer for the other parameters */
     int32_t* esp = (void *)&format;
     esp++;
 
@@ -306,24 +320,24 @@ int32_t snprintf(int8_t* mybuf, int length, int8_t *format, ...) {
             buf++;
 
         format_char_switch:
-            /* Conversion specifiers */
+/* Conversion specifiers */
             switch(*buf) {
-                /* Print a literal '%' character */
+/* Print a literal '%' character */
             case '%':
                 mybuf[i] = '%';
                 i++;
                 break;
 
-                /* Use alternate formatting */
+/* Use alternate formatting */
             case '#':
                 alternate = 1;
                 buf++;
-                /* Yes, I know gotos are bad.  This is the
-                 * most elegant and general way to do this,
-                 * IMHO. */
+/* Yes, I know gotos are bad.  This is the
+ * most elegant and general way to do this,
+ * IMHO. */
                 goto format_char_switch;
 
-                /* Print a number in hexadecimal form */
+/* Print a number in hexadecimal form */
             case 'x':
             {
                 int8_t conv_buf[64];
@@ -345,7 +359,7 @@ int32_t snprintf(int8_t* mybuf, int length, int8_t *format, ...) {
             }
             break;
 
-            /* Print a number in unsigned int form */
+/* Print a number in unsigned int form */
             case 'u':
             {
                 int8_t conv_buf[36];
@@ -355,7 +369,7 @@ int32_t snprintf(int8_t* mybuf, int length, int8_t *format, ...) {
             }
             break;
 
-            /* Print a number in signed int form */
+/* Print a number in signed int form */
             case 'd':
             {
                 int8_t conv_buf[36];
@@ -371,14 +385,14 @@ int32_t snprintf(int8_t* mybuf, int length, int8_t *format, ...) {
             }
             break;
 
-            /* Print a single character */
+/* Print a single character */
             case 'c':
                 mybuf[i] = ( (uint8_t) *((int32_t *)esp) );
                 i++;
                 esp++;
                 break;
 
-                /* Print a NULL-terminated string */
+/* Print a NULL-terminated string */
             case 's':
                 i += puts(mybuf+i,  *((int8_t **)esp) );
                 esp++;

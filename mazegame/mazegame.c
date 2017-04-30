@@ -68,14 +68,18 @@ int play_x, play_y, last_dir, dir;
 int move_cnt = 0;
 int fd;
 unsigned long data;
-
+uint8_t counter = 0;
 static void set_player_color(int init){
     /*Cycle player color*/
+    counter++;
+    if(counter >= 8){
+        int col = init ? 0 : (game_info.player_color + 1)%MAX_LEVEL;
+        /*Set player color*/
+        set_palette_color(PLAYER_CENTER_COLOR, palette_colors[col]);
+        game_info.player_color = col;
+        counter = 0;
+    }
 
-    int col = init ? 0 : (game_info.player_color + 1)%MAX_LEVEL;
-    /*Set player color*/
-    set_palette_color(PLAYER_CENTER_COLOR, palette_colors[col]);
-    game_info.player_color = col;
 }
 /*
  *  update_status_bar
@@ -611,4 +615,3 @@ int main() {
 
     return 0;
 }
-
