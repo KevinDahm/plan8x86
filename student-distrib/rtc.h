@@ -12,7 +12,7 @@
 #define BASE_RTC_FREQ (1 << BASE_RTC_LOG)
 #define BASE_RTC_LOG 10
 #define MAX_RTC_FREQ 1024
-#define DEFAULT_RTC_RATE (MAX_RTC_FREQ/2)
+#define DEFAULT_RTC_FREQ (MAX_RTC_FREQ/2)
 #define RTC_CMD_A 0x20
 #define RTC_CMD_B 0x40
 
