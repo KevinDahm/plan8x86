@@ -18,6 +18,12 @@ static int32_t color[NUM_TERM] = {ATTRIB, ATTRIB, ATTRIB};
 static int32_t term_x[NUM_TERM];
 static int32_t term_y[NUM_TERM];
 
+/*
+ * void video_init()
+ *   Inputs: none
+ *   Return Value: none
+ *   Function: Clears video memory for each terminal
+ */
 void video_init() {
     int i, j;
     for (i = 0; i < NUM_TERM; i++) {
@@ -28,6 +34,12 @@ void video_init() {
     }
 }
 
+/*
+ * uint8_t *get_video_mem()
+ *   Inputs: void
+ *   Return Value: pointer to video memory
+ *   Function: Returns a pointer to video memory of the current task
+ */
 uint8_t *get_video_mem() {
     if (cur_task == 0) {
         return (uint8_t *)VIDEO;
@@ -37,10 +49,10 @@ uint8_t *get_video_mem() {
 }
 
 /*
- * void clear(void);
+ * void clear(void)
  *   Inputs: void
  *   Return Value: none
- *    Function: Clears video memory
+ *   Function: Clears video memory
  */
 void clear(void) {
     int32_t i;
@@ -51,18 +63,23 @@ void clear(void) {
 }
 
 /*
- * void blue_screen(void);
+ * void blue_screen(void)
  *   Inputs: void
  *   Return Value: none
- *    Function: Clears video memory, sets the color to blue, and resets the cursor
+ *   Function: Clears video memory, sets the color to blue, and resets the cursor
  */
-
 void blue_screen(void) {
     set_color(BLUE);
     clear();
     set_cursor(0, 0);
 }
 
+/*
+ * void update_screen(uint32_t terminal)
+ *   Inputs: terminal - terminal to switch to
+ *   Return Value: none
+ *   Function: Switches the active terminal
+ */
 
 void update_screen(uint32_t terminal) {
     if(terminal >= NUM_TERM || terminal == active){
@@ -71,7 +88,7 @@ void update_screen(uint32_t terminal) {
     memcpy(terminal_video[active], (void *)VIDEO, KB4);
 
     int i;
-    for (i = 1; i < NUM_TASKS; i++) {
+    for (i = 1; i < NUM_TASKS; i++) { // Switch page tables to video memory
         if (tasks[i]->terminal == active) {
             page_table_kb_entry_t *usr_vid_table = (page_table_kb_entry_t *)tasks[i]->usr_vid_table;
             usr_vid_table->addr = (uint32_t)terminal_video[active] >> 12;
@@ -90,6 +107,12 @@ void update_screen(uint32_t terminal) {
     update_cursor();
 }
 
+/*
+ * void update_cursor()
+ *   Inputs: void
+ *   Return Value: none
+ *   Function: displays the cursor at the current position
+ */
 void update_cursor() {
     unsigned short position = (term_y[active] * NUM_COLS) + term_x[active];
 
@@ -101,10 +124,10 @@ void update_cursor() {
     outb((unsigned char )((position >> 8) & 0xFF), 0x3D5);
 }
 /*
- * void set_cursor(uint32_t x, uint32_t y);
+ * void set_cursor(uint32_t x, uint32_t y)
  *   Inputs: (x, y)
  *   Return Value: none
- *    Function: Sets cursor to columnn x, row y
+ *   Function: Sets cursor to columnn x, row y
  */
 void set_cursor(uint32_t x, uint32_t y) {
     if (x >= NUM_COLS || y >= NUM_ROWS) {
@@ -118,15 +141,21 @@ void set_cursor(uint32_t x, uint32_t y) {
 }
 
 /*
- * void set_color(col);
+ * void set_color(col)
  *   Inputs: col - Color to use
  *   Return Value: none
- *    Function: Sets future writes to given color
+ *   Function: Sets future writes to given color
  */
 void set_color(uint8_t col) {
     color[TASK_T] = col;
 }
 
+/*
+ * void move_up()
+ *   Inputs: none
+ *   Return Value: none
+ *   Function: Moves everything in the console up one row
+ */
 void move_up() {
     int i;
     term_y[TASK_T]--;
@@ -264,10 +293,10 @@ int32_t printf(int8_t *format, ...) {
 }
 
 /*
- * int32_t puts(int8_t* s);
+ * int32_t puts(int8_t* s)
  *   Inputs: int_8* s = pointer to a string of characters
  *   Return Value: Number of bytes written
- *    Function: Output a string to the console
+ *   Function: Output a string to the console
  */
 int32_t puts(int8_t* s) {
     register int32_t index = 0;
@@ -280,10 +309,10 @@ int32_t puts(int8_t* s) {
 }
 
 /*
- * void putc(uint8_t c);
+ * void putc(uint8_t c)
  *   Inputs: uint_8* c = character to print
  *   Return Value: void
- *    Function: Output a character to the console
+ *   Function: Output a character to the console
  */
 void putc(uint8_t c) {
     int i;
@@ -311,9 +340,10 @@ void putc(uint8_t c) {
 }
 
 /*
- * void removec();
+ * void removec()
+ *   Input: none
  *   Return Value: void
- *    Function: removes a character from the console
+ *   Function: removes a character from the console
  */
 void removec() {
     if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
@@ -335,7 +365,7 @@ void removec() {
  *            int8_t* buf = allocated buffer to place string in
  *            int32_t radix = base system. hex, oct, dec, etc.
  *   Return Value: number of bytes written
- *    Function: Convert a number to its ASCII representation, with base "radix"
+ *   Function: Convert a number to its ASCII representation, with base "radix"
  */
 
 int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix) {
@@ -372,10 +402,10 @@ int8_t* itoa(uint32_t value, int8_t* buf, int32_t radix) {
 }
 
 /*
- * int8_t* strrev(int8_t* s);
+ * int8_t* strrev(int8_t* s)
  *   Inputs: int8_t* s = string to reverse
  *   Return Value: reversed string
- *    Function: reverses a string s
+ *   Function: reverses a string s
  */
 
 int8_t* strrev(int8_t* s) {
@@ -395,10 +425,10 @@ int8_t* strrev(int8_t* s) {
 }
 
 /*
- * uint32_t strlen(const int8_t* s);
+ * uint32_t strlen(const int8_t* s)
  *   Inputs: const int8_t* s = string to take length of
  *   Return Value: length of string s
- *    Function: return length of string s
+ *   Function: return length of string s
  */
 
 uint32_t strlen(const int8_t* s) {
@@ -410,12 +440,12 @@ uint32_t strlen(const int8_t* s) {
 }
 
 /*
- * void* memset(void* s, int32_t c, uint32_t n);
+ * void* memset(void* s, int32_t c, uint32_t n)
  *   Inputs: void* s = pointer to memory
- *            int32_t c = value to set memory to
- *            uint32_t n = number of bytes to set
+ *           int32_t c = value to set memory to
+ *           uint32_t n = number of bytes to set
  *   Return Value: new string
- *    Function: set n consecutive bytes of pointer s to value c
+ *   Function: set n consecutive bytes of pointer s to value c
  */
 
 void* memset(void* s, int32_t c, uint32_t n) {
@@ -456,12 +486,12 @@ void* memset(void* s, int32_t c, uint32_t n) {
 }
 
 /*
- * void* memset_word(void* s, int32_t c, uint32_t n);
+ * void* memset_word(void* s, int32_t c, uint32_t n)
  *   Inputs: void* s = pointer to memory
- *            int32_t c = value to set memory to
- *            uint32_t n = number of bytes to set
+ *           int32_t c = value to set memory to
+ *           uint32_t n = number of bytes to set
  *   Return Value: new string
- *    Function: set lower 16 bits of n consecutive memory locations of pointer s to value c
+ *   Function: set lower 16 bits of n consecutive memory locations of pointer s to value c
  */
 
 /* Optimized memset_word */
@@ -481,12 +511,12 @@ void* memset_word(void* s, int32_t c, uint32_t n) {
 }
 
 /*
- * void* memset_dword(void* s, int32_t c, uint32_t n);
+ * void* memset_dword(void* s, int32_t c, uint32_t n)
  *   Inputs: void* s = pointer to memory
  *            int32_t c = value to set memory to
  *            uint32_t n = number of bytes to set
  *   Return Value: new string
- *    Function: set n consecutive memory locations of pointer s to value c
+ *   Function: set n consecutive memory locations of pointer s to value c
  */
 
 void* memset_dword(void* s, int32_t c, uint32_t n) {
@@ -505,12 +535,12 @@ void* memset_dword(void* s, int32_t c, uint32_t n) {
 }
 
 /*
- * void* memcpy(void* dest, const void* src, uint32_t n);
+ * void* memcpy(void* dest, const void* src, uint32_t n)
  *   Inputs: void* dest = destination of copy
- *            const void* src = source of copy
- *            uint32_t n = number of byets to copy
+ *           const void* src = source of copy
+ *           uint32_t n = number of byets to copy
  *   Return Value: pointer to dest
- *    Function: copy n bytes of src to dest
+ *   Function: copy n bytes of src to dest
  */
 
 void* memcpy(void* dest, const void* src, uint32_t n) {
@@ -554,12 +584,12 @@ void* memcpy(void* dest, const void* src, uint32_t n) {
 }
 
 /*
- * void* memmove(void* dest, const void* src, uint32_t n);
+ * void* memmove(void* dest, const void* src, uint32_t n)
  *   Inputs: void* dest = destination of move
  *            const void* src = source of move
  *            uint32_t n = number of byets to move
  *   Return Value: pointer to dest
- *    Function: move n bytes of src to dest
+ *   Function: move n bytes of src to dest
  */
 
 /* Optimized memmove (used for overlapping memory areas) */
@@ -587,15 +617,15 @@ void* memmove(void* dest, const void* src, uint32_t n) {
 /*
  * int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n)
  *   Inputs: const int8_t* s1 = first string to compare
- *            const int8_t* s2 = second string to compare
- *            uint32_t n = number of bytes to compare
+ *           const int8_t* s2 = second string to compare
+ *           uint32_t n = number of bytes to compare
  *    Return Value: A zero value indicates that the characters compared
  *                    in both strings form the same string.
  *                A value greater than zero indicates that the first
  *                    character that does not match has a greater value
  *                    in str1 than in str2; And a value less than zero
  *                    indicates the opposite.
- *    Function: compares string 1 and string 2 for equality
+ *   Function: compares string 1 and string 2 for equality
  */
 int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n) {
     int32_t i;
@@ -618,9 +648,9 @@ int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n) {
 /*
  * int8_t* strcpy(int8_t* dest, const int8_t* src)
  *   Inputs: int8_t* dest = destination string of copy
- *            const int8_t* src = source string of copy
+ *           const int8_t* src = source string of copy
  *   Return Value: pointer to dest
- *    Function: copy the source string into the destination string
+ *   Function: copy the source string into the destination string
  */
 int8_t* strcpy(int8_t* dest, const int8_t* src) {
     int32_t i=0;
@@ -636,10 +666,10 @@ int8_t* strcpy(int8_t* dest, const int8_t* src) {
 /*
  * int8_t* strcpy(int8_t* dest, const int8_t* src, uint32_t n)
  *   Inputs: int8_t* dest = destination string of copy
- *            const int8_t* src = source string of copy
- *            uint32_t n = number of bytes to copy
+ *           const int8_t* src = source string of copy
+ *           uint32_t n = number of bytes to copy
  *   Return Value: pointer to dest
- *    Function: copy n bytes of the source string into the destination string
+ *   Function: copy n bytes of the source string into the destination string
  */
 int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
     int32_t i=0;
@@ -660,7 +690,7 @@ int8_t* strncpy(int8_t* dest, const int8_t* src, uint32_t n) {
  * void test_interrupts(void)
  *   Inputs: void
  *   Return Value: void
- *    Function: increments video memory. To be used to test rtc
+ *   Function: increments video memory
  */
 void test_interrupts(void) {
     int32_t i;

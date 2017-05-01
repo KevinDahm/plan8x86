@@ -8,37 +8,76 @@
 #include "types.h"
 #include "schedule.h"
 #include "page.h"
-
+// Clears video memory for each terminal
 void video_init();
-extern int32_t printf(int8_t *format, ...);
-void putc(uint8_t c);
-void removec();
-int32_t puts(int8_t *s);
-int8_t *itoa(uint32_t value, int8_t* buf, int32_t radix);
-int8_t *strrev(int8_t* s);
-uint32_t strlen(const int8_t* s);
-void clear(void);
-void blue_screen(void);
-void update_cursor();
-void set_cursor(uint32_t x, uint32_t y);
-void set_color(uint8_t col);
-void move_up();
-void update_screen(uint32_t terminal);
-uint32_t get_active();
 
+// Standard printf
+extern int32_t printf(int8_t *format, ...);
+
+// Output a character to the console
+void putc(uint8_t c);
+
+//removes a character from the console
+void removec();
+
+//Output a string to the console
+int32_t puts(int8_t *s);
+
+//Convert a number to its ASCII representation, with base "radix"
+int8_t *itoa(uint32_t value, int8_t* buf, int32_t radix);
+
+//reverses a string
+int8_t *strrev(int8_t* s);
+
+//return length of string
+uint32_t strlen(const int8_t* s);
+
+//Clears videdo memory
+void clear(void);
+
+//Clears video memory, sets the color to blue, and resets the cursor
+void blue_screen(void);
+
+//displays the cursor at the current position
+void update_cursor();
+
+//Sets cursor to columnn x, row y
+void set_cursor(uint32_t x, uint32_t y);
+
+//Sets future writes to given color
+void set_color(uint8_t col);
+
+//Moves everything in the console up one row
+void move_up();
+
+//Switches the active terminal
+void update_screen(uint32_t terminal);
+
+//set n consecutive bytes of pointer s to value c
 void* memset(void* s, int32_t c, uint32_t n);
+
+//set lower 16 bits of n consecutive memory locations of pointer s to value c
 void* memset_word(void* s, int32_t c, uint32_t n);
+
+// set n consecutive memory locations of pointer s to value c
 void* memset_dword(void* s, int32_t c, uint32_t n);
+
+// copy n bytes of src to dest
 void* memcpy(void* dest, const void* src, uint32_t n);
+
+// move n bytes of src to dest
 void* memmove(void* dest, const void* src, uint32_t n);
+
+//compares string 1 and string 2 for equality
 int32_t strncmp(const int8_t* s1, const int8_t* s2, uint32_t n);
+
+// copy the source string into the destination string
 int8_t* strcpy(int8_t* dest, const int8_t*src);
+
+//copy n bytes of the source string into the destination string
 int8_t* strncpy(int8_t* dest, const int8_t*src, uint32_t n);
 
-/* Userspace address-check functions */
-int32_t bad_userspace_addr(const void* addr, int32_t len);
-int32_t safe_strncpy(int8_t* dest, const int8_t* src, int32_t n);
-
+//Increments all of video memory
 void test_interrupts();
 
 int8_t terminal_video[NUM_TERM][KB4] __attribute__((aligned (KB4)));

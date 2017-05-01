@@ -355,7 +355,7 @@ int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
  *        buf - buffer to write kbd_t structs
  *        nbytes - double the number of keys desired
  * output: number of bytes written on success, -1 for invalid input
- * Side effects: none
+ * Side effects: sleeps for keys
  */
 int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes) {
     kbd_clear();

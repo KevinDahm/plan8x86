@@ -37,9 +37,16 @@ typedef struct {
     iret_context_t iret_context;
 } hw_context_t;
 
+// Back up the user stack pointer
 extern void backup_uesp(hw_context_t *hw_contex);
+
+// Switches the active process
 extern void reschedule();
+
+// PIT irq handler, switches the active process
 extern void schedule();
-void pit_init();
+
+// Initialzes the PIT
+extern void pit_init();
 
 #endif

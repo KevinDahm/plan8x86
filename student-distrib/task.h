@@ -4,14 +4,21 @@
 #include "types.h"
 #include "schedule.h"
 
+//Initializes paging for the kernel and each user task and sets up default values for each task
 void create_init();
+
+// Sets up a 4KB page mapping to video memory
 void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv);
+
+//Fills in a 4MB page directory entry at dir (which provides the virtual address) and maps it to physical address 4MB
 void setup_kernel_mem(uint32_t *dir);
+//Fills in a 4MB page directory entry at dir (which provides the virtual address) and maps it to physical address
 void setup_task_mem(uint32_t *dir, uint32_t task);
 
 #define FILE_DESCS_LENGTH 8
 #define NUM_TASKS 10
 
+//stub functions - default for file_ops
 int32_t default_open(const int8_t *buf);
 int32_t default_close(int32_t fd);
 int32_t default_read(int32_t fd, void *buf, int32_t nbytes);

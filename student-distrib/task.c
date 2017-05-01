@@ -5,6 +5,7 @@
 
 uint8_t cur_task = INIT;
 
+//stub functions - default for file_ops
 int32_t default_open(const int8_t *buf) {
     return -1;
 }
@@ -25,7 +26,7 @@ int32_t default_stat(int32_t fd, void *buf, int32_t nbytes) {
     return -1;
 }
 
-/* setup_kernel_mem
+/* void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv)
  * Description: Sets up a 4KB page mapping to video memory
  * Input:  dir - A pointer to a page directory entry to fill out
  *         table - A pointer to a page table entry to fill out
@@ -66,7 +67,7 @@ void setup_vid(uint32_t *dir, uint32_t *table, uint32_t priv) {
     vid_entry->present = 1;
 }
 
-/* setup_kernel_mem
+/* void setup_kernel_mem(uint32_t *dir)
  * Description: Fills in a 4MB page directory entry at dir (which provides the virtual address) and maps it to physical address 4MB
  * Input:  dir - A pointer to a page directory entry to fill out
  * Output: none
@@ -89,7 +90,7 @@ void setup_kernel_mem(uint32_t *dir) {
     kernel_entry->present = 1;
 }
 
-/* setup_task_mem
+/* void setup_task_mem(uint32_t *dir, uint32_t task)
  * Description: Fills in a 4MB page directory entry at dir (which provides the virtual address) and maps it to physical address
  *              given by 4MB * (task + 1)
  * Input:  dir - A pointer to a page directory entry to fill out
@@ -114,7 +115,7 @@ void setup_task_mem(uint32_t *dir, uint32_t task) {
     task_entry->present = 1;
 }
 
-/* create_init
+/* void create_init()
  * Description: Initializes paging for the kernel and each user task and sets up default values for each task
  * Input:  none
  * Output: none

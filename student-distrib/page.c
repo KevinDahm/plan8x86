@@ -2,11 +2,10 @@
 #include "lib.h"
 #include "task.h"
 
-/* init_paging
- * Description: Sets flags and moves directory address to CR3
+/* void init_paging()
+ * Description: Sets flags for paging
  * Inputs:      None
  * Outputs:     None
- * Ret Value:   None
  * Side Effect: Paging is enabled
  */
 void init_paging(){
@@ -24,12 +23,17 @@ void init_paging(){
         );
 }
 
-void switch_page_directory(int pd) {
+/* void switch_page_directory(int task)
+ * Description: moves directory address to CR3
+ * Inputs:      task - task index to switch to
+ * Outputs:     None
+ * Side Effect: TLB flushed and paging swapped
+ */
+void switch_page_directory(int task) {
     asm volatile("              \n\
     movl    %0, %%cr3           \n\
     "
                  : /* no outputs */
-                 : "a"(tasks[pd]->page_directory)
+                 : "a"(tasks[task]->page_directory)
         );
 }
-

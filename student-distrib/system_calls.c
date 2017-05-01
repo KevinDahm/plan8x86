@@ -14,7 +14,7 @@ bool backup_init_ebp = true;
 
 
 uint32_t halt_status;
-/* sys_halt
+/* int32_t sys_halt(uint32_t status)
  * Description: Stops the process that called this and returns control to the proccess that ran sys_execute
  * Input:  status - The return value of the user process that called sys_halt
  * Output: returns status
@@ -87,7 +87,7 @@ sys_halt_return:
     return halt_status;
 }
 
-/* sys_execute
+/* int32_t sys_execute(const uint8_t* command)
  * Description: Starts a new process specified by command
  * Input:  command - the process to start and any args to send to it
  * Output: -1 on error, 0 on success
@@ -263,7 +263,7 @@ int32_t sys_execute(const uint8_t* command) {
     return 0;
 }
 
-/* sys_read
+/* int32_t sys_read(int32_t fd, void* buf, int32_t nbytes)
  * Description: reads nbytes from the file pointed to by fd into buf
  * Input:  fd - the file descriptor to read from
  *         buf - the buffer to read into
@@ -278,7 +278,7 @@ int32_t sys_read(int32_t fd, void* buf, int32_t nbytes) {
     return (*tasks[cur_task]->file_descs[fd].ops->read)(fd, buf, nbytes);
 }
 
-/* sys_write
+/* int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes)
  * Description: writes nbytes of buf into the file pointed to by fd (unimplemented on filesystem)
  * Input:  fd - the file descriptor to write to
  *         buf - the buffer to write from
@@ -293,7 +293,7 @@ int32_t sys_write(int32_t fd, const void* buf, int32_t nbytes) {
     return (*tasks[cur_task]->file_descs[fd].ops->write)(fd, buf, nbytes);
 }
 
-/* sys_open
+/* int32_t sys_open(const uint8_t* filename)
  * Description: opens the file filename for cur_task and returns an fd for it
  * Input:  filename - the file to open
  * Output: -1 on error, fd otherwise
@@ -371,6 +371,12 @@ int32_t sys_open(const uint8_t* filename) {
     }
 }
 
+/* int32_t sys_close(int32_t fd)
+ * Description: closes the file filename for cur_task
+ * Input:  fd - indec for the file to close
+ * Output: -1 on error, 0 on success
+ * Side Effects: writes to tasks[cur_task]->file_descs
+ */
 int32_t sys_close(int32_t fd) {
     if (fd >= FILE_DESCS_LENGTH || fd < 2) {
         return -1;
@@ -390,6 +396,13 @@ int32_t sys_close(int32_t fd) {
     return ret;
 }
 
+/* int32_t sys_getargs(uint8_t* buf, int32_t nbytes)
+ * Description: copies the string arguments for a task to buf
+ * Input:  buf - buffer to store the string
+ *         nbytes - max number of bytes to write
+ * Output: -1 on error, 0 on success
+ * Side Effects: writes to *buf
+ */
 int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
     if (buf == NULL) {
         return -1;
@@ -406,6 +419,12 @@ int32_t sys_getargs(uint8_t* buf, int32_t nbytes) {
     return 0;
 }
 
+/* int32_t sys_vidmap(uint8_t** screen_start
+ * Description: makes *screen_start a pointer to video memory
+ * Input:  screen_start - pointer to what becomes a pointer to video memory
+ * Output: -1 on error, 0 on success
+ * Side Effects: writes to *screen_start, changes video memory access permissions
+ */
 int32_t sys_vidmap(uint8_t** screen_start) {
     if ((uint32_t)screen_start < TASK_ADDR || (uint32_t)screen_start >= (TASK_ADDR + MB4)) {
         return -1;
@@ -423,6 +442,13 @@ int32_t sys_vidmap(uint8_t** screen_start) {
     return 0;
 }
 
+/* int32_t sys_set_handler(int32_t signum, void* handler_address)
+ * Description: makes handler_address the signal handler for signal signum for the task
+ * Input:  signum - signal to catch
+ *         handler_address - pointer to new handler
+ * Output: -1 on error, 0 on success
+ * Side Effects: changes the signal handler
+ */
 int32_t sys_set_handler(int32_t signum, void* handler_address) {
     if ((uint32_t)handler_address < TASK_ADDR || (uint32_t)handler_address >= (TASK_ADDR + MB4)) {
         return -1;
@@ -431,6 +457,12 @@ int32_t sys_set_handler(int32_t signum, void* handler_address) {
     return 0;
 }
 
+/* int32_t sys_sigreturn(void))
+ * Description: returns from a user signal handler
+ * Input: none
+ * Output: expected old return value
+ * Side Effects: remaps the program to normal execution
+ */
 int32_t sys_sigreturn(void) {
     tasks[cur_task]->signal_mask = false;
 
@@ -453,6 +485,12 @@ int32_t sys_sigreturn(void) {
     return 0;
 }
 
+/* int32_t sys_vidmap_all(uint8_t** screen_start
+ * Description: makes *screen_start a pointer to video memory for ALL of VGA
+ * Input:  screen_start - pointer to what becomes a pointer to video memory
+ * Output: -1 on error, 0 on success
+ * Side Effects: writes to *screen_start, changes video memory access permissions
+ */
 int32_t sys_vidmap_all(uint8_t** screen_start) {
     if ((uint32_t)screen_start < TASK_ADDR || (uint32_t)screen_start >= (TASK_ADDR + MB4)) {
         return -1;
@@ -487,15 +525,30 @@ int32_t sys_vidmap_all(uint8_t** screen_start) {
     return 0;
 }
 
+/* int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on)
+ * Description: gives the user access to all io ports
+ * Input:  from - unused
+ *         num - unused
+ *         turn_on - unused
+ * Output: 0 on success
+ * Side Effects: changes eflags in iret context
+ */
 int32_t sys_ioperm(uint32_t from, uint32_t num, int32_t turn_on) {
-    // TODO: Use the TSS to avoid giving permisions for all ports
     uint32_t *ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
+    //set the bit in eflags
     ebp[19] |= 0x3000;
 
     return 0;
 }
 
+/* int32_t sys_thread_create(uint32_t *tid, void (*thread_start)())
+ * Description: starts a new thread at function thread_start and stores its id in td
+ * Input:  tid - pointer to thread id
+ *         thread_start - function to run
+ * Output: -1 on error, 0 on success
+ * Side Effects: modifies tasks
+ */
 int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     cli();
     uint32_t ebp;
@@ -581,6 +634,12 @@ int32_t sys_thread_create(uint32_t *tid, void (*thread_start)()) {
     return 0;
 }
 
+/* int32_t sys_thread_join(uint32_t tid)
+ * Description: waits for a child thread to exit
+ * Input:  tid - thread id of child
+ * Output: 0 on success
+ * Side Effects: changes task status, sleeps
+ */
 int32_t sys_thread_join(uint32_t tid) {
     if (tasks[tid]->status == TASK_ZOMBIE) {
         tasks[tid]->status = TASK_EMPTY;
@@ -595,6 +654,14 @@ int32_t sys_thread_join(uint32_t tid) {
     return 0;
 }
 
+/* int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes)
+ * Description: writes file stats to buf
+ * Input:  fd- index of file to stat
+ *         buf - buffer to write stats to
+ *         nbytes - max bytes to write to buffer
+ * Output: -1 on error, 0 on success
+ * Side Effects: none
+ */
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
         return -1;
@@ -602,6 +669,12 @@ int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     return (*tasks[cur_task]->file_descs[fd].ops->stat)(fd, buf, nbytes);
 }
 
+/* int32_t sys_time()
+ * Description: returns time since system boot
+ * Input: none
+ * Output: seconds since system boot
+ * Side Effects: none
+ */
 uint32_t sys_time(){
     return get_time();
 }

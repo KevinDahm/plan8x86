@@ -22,6 +22,12 @@ static int cur_p = 0;
 // ~15ms time slices
 #define HIGH_FREQ_BYTE 75
 
+/* void reschedule()
+ * Decription: Switches the active process
+ * input: none
+ * output: none
+ * Side effects: writes to the PIT, changes the current task
+ */
 void reschedule() {
     cli();
 
@@ -33,12 +39,24 @@ void reschedule() {
     asm volatile("int $0x20;");
 }
 
+/* void backup_uesp(hw_context_t *hw_context)
+ * Decription: Back up the user stack pointer
+ * input: hw_context - pointer to the hw_context to store
+ * output: none
+ * Side effects: writes the stack pointer to the pcb
+ */
 void backup_uesp(hw_context_t *hw_context) {
     if (hw_context->iret_context.eip >= TASK_ADDR) {
         tasks[cur_task]->user_esp = hw_context->iret_context.esp;
     }
 }
 
+/* void schedule()
+ * Decription: PIT irq handler, switches the active process
+ * input: none
+ * output: none
+ * Side effects: switches the active process
+ */
 void schedule() {
     uint32_t ebp;
     asm volatile("movl %%ebp, %0;" : "=r"(ebp) : );
@@ -80,11 +98,15 @@ void schedule() {
     asm volatile("leave; ret;" : :);
 }
 
+/* void pit_init()
+ * Decription: Initialzes the PIT
+ * input: none
+ * output: none
+ * Side effects: writes to the PIT
+ */
 void pit_init(){
     // 00110100b - Magic (sets the pit up for regular interrupts on IRQ0)
     outb(0x34, PIT_PORT_COMMAND);
     outb(LOW_FREQ_BYTE, PIT_PORT_CHANNEL_0);
     outb(HIGH_FREQ_BYTE, PIT_PORT_CHANNEL_0);
 }
-
-

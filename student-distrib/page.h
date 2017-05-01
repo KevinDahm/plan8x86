@@ -63,9 +63,10 @@ typedef struct __attribute__((packed)) page_table_kb_entry{
 uint32_t page_directory_tables[NUM_TASKS][DIR_SIZE] __attribute__((aligned (KB4)));
 uint32_t page_tables[NUM_TASKS][2][DIR_SIZE] __attribute__((aligned (KB4)));
 
-// Sets PG, PSE, and PE flags. Moves directory address to CR3
+// Sets PG, PSE, and PE flags
 extern void init_paging();
 
+//moves directory address to CR3
 extern void switch_page_directory(int pd);
 
 #endif // PAGE_H
