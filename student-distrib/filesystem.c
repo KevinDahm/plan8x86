@@ -7,6 +7,13 @@ static void* fs_end;
 
 static boot_block_t* boot_block;
 
+/* void file_system_init(void* start, void* end)
+ * Description: intializes the filesystem and its operations
+ * Input:  start - pointer to start of filesystem
+ *         end - pointer to end of filesytem
+ * Output: none
+ * Side Effects: changes filesystem variables
+ */
 void file_system_init(void* start, void* end) {
     fs_start = start;
     fs_end = end;
@@ -19,9 +26,14 @@ void file_system_init(void* start, void* end) {
     filesys_ops.stat = filesys_stat;
 }
 
+/* int32_t filesys_open(const int8_t* filename)
+ * Description: opens a file, by returning the inode
+ * Input:  filename - file to open
+ * Output: inode on success, NULL for directory, -1 for anything else
+ * Side Effects: reads from the filesystem
+ */
 int32_t filesys_open(const int8_t* filename) {
     dentry_t dentry;
-    // TODO: If file does not already exist create it? EC?
     if (read_dentry_by_name(filename, &dentry) == 0) {
         switch (dentry.type) {
         case 2:
@@ -35,9 +47,24 @@ int32_t filesys_open(const int8_t* filename) {
     } else return -1;
 }
 
+/* int32_t filesys_close(int32_t fd)
+ * Description: closes a file
+ * Input: fd - index of file to close
+ * Output: 0 for success
+ * Side Effects: none
+ */
 int32_t filesys_close(int32_t fd) {
     return 0;
 }
+
+/* int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes)
+ * Description: writes file stats to buf
+ * Input:  fd- index of file to stat
+ *         buf - buffer to write stats to
+ *         nbytes - max bytes to write to buffer
+ * Output: -1 on error, 0 on success
+ * Side Effects: reads from filesystem
+ */
 int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     dentry_t e;
     switch(tasks[cur_task]->file_descs[fd].flags) {
@@ -56,6 +83,15 @@ int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes){
     return 0;
 }
 
+
+/* int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes)
+ * Description: reads nbytes from a file
+ * Input: fd - index of file to read from
+ *        buf - buffer to write file to
+ *        nbytes - number of bytes to read
+ * Output: number of bytes read
+ * Side Effects: reads from filesystem
+ */
 int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
     // Pronounced "red"
     int32_t read;
@@ -74,10 +110,18 @@ int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes) {
     return read;
 }
 
-int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t length) {
+/* int32_t read_dir_data(int32_t index, void* buf, int32_t nbytes)
+ * Description: reads a file name from a directory
+ * Input: index - index of file to read
+ *        buf - buffer to write file name into
+ *        nbytes - number of bytes to read
+ * Output: number of bytes read
+ * Side Effects: reads from filesystem
+ */
+int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t nbytes) {
     if (index >= boot_block->num_dentries)
         return 0;
-    uint32_t length_to_read = 32 > length ? length : 32;
+    uint32_t length_to_read = 32 > nbytes ? nbytes : 32;
     dentry_t d;
     read_dentry_by_index(index, &d);
 
@@ -88,10 +132,27 @@ int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t length) {
     return length_to_read;
 }
 
+/* int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes)
+ * Description: writes to the filesytem which does nothing
+ * Input: fd - unused
+ *        buf - unused
+ *        nbytes - unused
+ * Output: 0 for success
+ * Side Effects: none
+ */
 int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes) {
     return 0;
 }
 
+/* int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length)
+ * Description: reads data from a file
+ * Input: inode - inode of file to read
+ *        offset - point in file to read from
+ *        buf - buffer to write file data
+ *        length - number of bytes to read
+ * Output: number of bytes read
+ * Side Effects: reads from filesystem
+ */
 int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32_t length) {
     if (offset > inode->length) {
         return 0;
@@ -125,6 +186,15 @@ int32_t read_data_by_inode(inode_t *inode, uint32_t offset, uint8_t* buf, uint32
     return length_to_read;
 }
 
+/* int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length)
+ * Description: reads file data into buf
+ * Input: inode - inode of file to read from
+ *        offset - point in file to start reading
+ *        buf - buffer to write data to
+ *        length - number of bytes to read
+ * Output: -1 on error, bytes read on success
+ * Side Effects: reads from filesystem
+ */
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length) {
     if (inode >= boot_block->num_inodes) {
         return -1;
@@ -133,6 +203,13 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
     return read_data_by_inode(inode_block, offset, buf, length);
 }
 
+/* int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
+ * Description: Copies a file information to *dentry
+ * Input:  index - file index to read
+ *         dentry - dentry_t to store the file
+ * Output: -1 for error, 0 on success
+ * Side Effects: reads from filesystem, writes to *dentry
+ */
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry) {
     if (index < boot_block->num_dentries) {
         memcpy(dentry->name, boot_block->dentries[index].name, 32);
@@ -144,6 +221,12 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry) {
     return -1;
 }
 
+/* uint32_t get_index(const int8_t* fname)
+ * Description: gets index of a file in the directory
+ * Input:  fname - file to search for
+ * Output: index of file, or -1 on failure
+ * Side Effects: reads from the filesystem
+ */
 uint32_t get_index(const int8_t* fname) {
     uint32_t i;
     uint32_t j;
@@ -166,6 +249,13 @@ uint32_t get_index(const int8_t* fname) {
     return -1;
 }
 
+
+/* uint32_t get_size(uint32_t inode_index)
+ * Description: returns size of a file
+ * Input:  inode_index - index of file
+ * Output: 0 for nonexistant, else length of file
+ * Side Effects: reads from filesystem
+ */
 uint32_t get_size(uint32_t inode_index) {
     if (inode_index >= boot_block->num_inodes) {
         return 0;
@@ -174,6 +264,13 @@ uint32_t get_size(uint32_t inode_index) {
     return inode_block->length;
 }
 
+/* int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry)
+ * Description: copies a files info to *dentry
+ * Input: fname - file to read about
+ *        dentry - dentry_t to store the file info
+ * Output: 0 for success, -1 on error
+ * Side Effects: reads from the filesystem
+ */
 int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry) {
     uint32_t i;
     if ((i = get_index(fname)) != (uint32_t)-1)

@@ -34,19 +34,43 @@ typedef struct fstat {
     uint32_t size;
 }fstat_t;
 
+//intializes the filesystem and its operations
 extern void file_system_init(void* start, void* end);
+
+//copies a files info to *dentry
 extern int32_t read_dentry_by_name(const int8_t* fname, dentry_t* dentry);
+
+//Copies a file information to *dentry
 extern int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry);
+
+//reads file data into buf
 extern int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length);
+
+//reads a file name from a directory
 extern int32_t read_dir_data(uint32_t index, uint8_t* buf, uint32_t length);
+
+// reads data from a file
 extern int32_t read_data_by_inode(inode_t* inode, uint32_t offset, uint8_t* buf, uint32_t length);
+
+// gets index of a file in the directory
 extern uint32_t get_index(const int8_t* fname);
+
+//returns size of a file
 extern uint32_t get_size(uint32_t inode_index);
 
+//opens a file, by returning the inode
 extern int32_t filesys_open(const int8_t* filename);
+
+// closes a file
 extern int32_t filesys_close(int32_t fd);
+
+//reads nbytes from a file
 extern int32_t filesys_read(int32_t fd, void* buf, int32_t nbytes);
+
+// writes to the filesytem which does nothing
 extern int32_t filesys_write(int32_t fd, const void* buf, int32_t nbytes);
+
+// writes file stats to buf
 extern int32_t filesys_stat(int32_t fd, void* buf, int32_t nbytes);
 
 #endif

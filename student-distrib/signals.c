@@ -5,6 +5,12 @@
 #include "x86_desc.h"
 #include "page.h"
 
+/* void check_for_signals(hw_context_t *hw_context)
+ * Description: check for signals for the current task
+ * Input:  hw_context - pointer to hw_context to return to
+ * Output: none
+ * Side Effects: runs signal handlers
+ */
 void check_for_signals(hw_context_t *hw_context) {
     if (tasks[cur_task]->pending_signals != 0) {
         if (hw_context->iret_context.cs == KERNEL_CS) {
@@ -17,6 +23,12 @@ void check_for_signals(hw_context_t *hw_context) {
     }
 }
 
+/* void handle_default_signal(int32_t signal)
+ * Description: handles signals if no signal handler has been set
+ * Input: signal - which signal was raised
+ * Output: none
+ * Side Effects: can halt current task
+ */
 void handle_default_signal(int32_t signal) {
     switch (signal) {
     case DIV_ZERO:
@@ -30,6 +42,12 @@ void handle_default_signal(int32_t signal) {
     }
 }
 
+/* void handle_signals(hw_context_t *hw_context)
+ * Description: executes signal handlers
+ * Input:  hw_context - pointer to hw_context to return to
+ * Output: none
+ * Side Effects: changes hw context to run signal handlers
+ */
 void handle_signals(hw_context_t *hw_context) {
     uint8_t signal;
     if (tasks[cur_task]->signal_mask == false) {

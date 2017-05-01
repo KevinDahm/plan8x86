@@ -660,7 +660,7 @@ int32_t sys_thread_join(uint32_t tid) {
  *         buf - buffer to write stats to
  *         nbytes - max bytes to write to buffer
  * Output: -1 on error, 0 on success
- * Side Effects: none
+ * Side Effects: calls file stat
  */
 int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
     if (fd < 0 || fd > FILE_DESCS_LENGTH) {
