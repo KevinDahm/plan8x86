@@ -138,7 +138,7 @@ int32_t sys_execute(const uint8_t* command) {
     tasks[cur_task]->thread_status = 0;
     tasks[cur_task]->thread_waiting = 0;
     tasks[cur_task]->rtc_counter = 0;
-    tasks[cur_task]->rtc_base = 512;
+    tasks[cur_task]->rtc_base = DEFAULT_RTC_FREQ;
     tasks[cur_task]->pending_signals = 0;
     tasks[cur_task]->signal_mask = false;
 
@@ -153,13 +153,13 @@ int32_t sys_execute(const uint8_t* command) {
     memset(tasks[cur_task]->usr_vid_table, PAGE_RW, TABLE_SIZE);
 
     setup_vid(tasks[cur_task]->page_directory, tasks[cur_task]->kernel_vid_table, 0);
-    setup_vid(tasks[cur_task]->page_directory + 33, tasks[cur_task]->usr_vid_table, 1);
+    setup_vid(tasks[cur_task]->page_directory + TASK_VIDEO_OFFSET, tasks[cur_task]->usr_vid_table, 1);
 
     // 1 * 4MB for virtual address of 4MB
     setup_kernel_mem(tasks[cur_task]->page_directory + 1);
 
     // 32 * 4MB for virtual address of 128MB
-    setup_task_mem(tasks[cur_task]->page_directory + 32, cur_task);
+    setup_task_mem(tasks[cur_task]->page_directory + TASK_OFFSET, cur_task);
 
     // Inherit the terminal from parent. Also sets the usr_vid_table page up depending
     // on whether terminal is focused.
@@ -431,7 +431,7 @@ int32_t sys_vidmap(uint8_t** screen_start) {
     }
 
     // Give the user program permission to use video memory
-    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + 33)->userSupervisor = 1;
+    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + TASK_VIDEO_OFFSET)->userSupervisor = 1;
     ((page_table_kb_entry_t*)tasks[cur_task]->usr_vid_table)->userSupervisor = 1;
 
     // Flush the TLB
@@ -496,7 +496,7 @@ int32_t sys_vidmap_all(uint8_t** screen_start) {
         return -1;
     }
 
-    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + 33)->userSupervisor = 1;
+    ((page_dir_kb_entry_t*)tasks[cur_task]->page_directory + TASK_VIDEO_OFFSET)->userSupervisor = 1;
 
     // VGA memory is mapped to addresses 0xA0000 - 0xBFFFF
     uint32_t vid_mem = 0xA0000;

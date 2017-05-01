@@ -17,6 +17,8 @@ void setup_task_mem(uint32_t *dir, uint32_t task);
 
 #define FILE_DESCS_LENGTH 8
 #define NUM_TASKS 10
+#define TASK_OFFSET 32
+#define TASK_VIDEO_OFFSET 33
 
 //stub functions - default for file_ops
 int32_t default_open(const int8_t *buf);

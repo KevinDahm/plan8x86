@@ -169,13 +169,13 @@ void create_init() {
         memset(tasks[task]->usr_vid_table, PAGE_RW, TABLE_SIZE);
 
         setup_vid(tasks[task]->page_directory, tasks[task]->kernel_vid_table, 0);
-        setup_vid(tasks[task]->page_directory + 33, tasks[task]->usr_vid_table, 1);
+        setup_vid(tasks[task]->page_directory + TASK_VIDEO_OFFSET, tasks[task]->usr_vid_table, 1);
 
         // 1 * 4MB for virtual address of 4MB
         setup_kernel_mem(tasks[task]->page_directory + 1);
 
         // 32 * 4MB for virtual address of 128MB
-        setup_task_mem(tasks[task]->page_directory + 32, task);
+        setup_task_mem(tasks[task]->page_directory + TASK_OFFSET, task);
 
         tasks[task]->file_descs = file_desc_arrays[task];
         uint32_t file_i;

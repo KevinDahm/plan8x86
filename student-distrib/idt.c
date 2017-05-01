@@ -40,6 +40,12 @@ void handle_exception(int8_t *exc_str, uint32_t err_val) {
 }
 
 
+/* void do_exceptions(hw_context_t* hw_context)
+ * Description: blue screens or kills user program on exception
+ * Input:  hw_context - to print eip for debugging
+ * Output: none
+ * Side Effects: Kills process or blue screens
+ */
 void do_debug(hw_context_t* hw_context) { handle_exception("debug", hw_context->iret_context.eip); }
 void do_nmi(hw_context_t* hw_context) { handle_exception("nmi", hw_context->iret_context.eip); }
 void do_int3(hw_context_t* hw_context) { handle_exception("int3", hw_context->iret_context.eip); }
@@ -116,7 +122,7 @@ void do_page_fault(hw_context_t* hw_context, uint32_t error) {
 
 /* do_IRQ
  * Description: Walks the irqaction linked list and executes each handler
- * Input:  regs - The registers saved on the stack when the interrupt occurred
+ * Input:  hw_context - The registers saved on the stack when the interrupt occurred
  * Output: none
  * Side Effects: Calls every handler in irq_descs[irq]
  */
