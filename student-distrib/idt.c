@@ -41,7 +41,7 @@ void handle_exception(int8_t *exc_str, uint32_t err_val) {
 
 
 /* void do_exceptions(hw_context_t* hw_context)
- * Description: blue screens or kills user program on exception
+ * Description: calls handle_exception above
  * Input:  hw_context - to print eip for debugging
  * Output: none
  * Side Effects: Kills process or blue screens
