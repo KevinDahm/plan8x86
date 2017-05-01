@@ -1,0 +1,47 @@
+In 662c357422cce914d87b19c357ab9007a2417e00 Adam fixed a bug in which modifier keys were not setting the keyboard state correctly. He did this by setting the row and col fields to 0 on modifier presses. This took only a few minutes to fix.
+
+In 8d65e853f76e67bf480a51087fad8e28509bbb1e Adam fixed a bug that allowed the keyboard buffer to overflow by capping the number of bytes at 128 and breaking out of a loop if too much is read. This took 30 minutes to fix.
+
+In 29812c478c4643a0f65f5da54cbefc7d4cdf5de9 David fixed a bug that caused the last file in the directory to be repeated 3 times in the F3 test from CP2. This took 30 minutes to fix.
+
+In 326799ee88d520e5cc7de157a5a6dbc902ee7fbe David fixed a buffer overflow bug by resetting a buffer_full boolean to 0 after data was read from the keyboard buffer. This took a few minutes to fix.
+
+In dd653134deb6a14e1c3367f06f69b7ad01a12931 Ben fixed a bug in which sys_halt would return the wrong value. It did this because the ebp was overwritten with a saved value from sys_execute. After this occurred sys_halt would return the value passed into it but the location of that argument was retrieved as an offset of ebp and thus was suddenly incorrect. The solution was to save the value in a file local variable not on the stack. This took 2 hours to fix.
+
+In fa60903e879799a0e8cdd89a5177f2ee8b416dcf Ben fixed a bug where int $0x80 would crash and jump into nothing if eax was not valid. He did this by bounds checking eax before jumping. This took 30 minutes to fix.
+
+In d879eb23b97faef7944340381c8749fb0a786e62 Ben fixed a bug that would break the machine when a bad command was executed. This happened because a new task was set to TASK_RUNNING before it was confirmed that an executable exists in the filesystem. Then after the executable could not be found the cur_task was not reset to the parent so the system would think a new process was running but in reality the process that called execute would resume control. This took 30 minutes to fix.
+
+In 80914f426bd0e1a34b0c5d3caf013b01a0e407fc Ben fixed a bug that prevented the RTC from being openned by multiple processes. He did this by enabling the rtc on open and counting the number of times open was called and only disabling the rtc on close after all open process had called close. This took a few minutes to fix.
+
+In 73cb8dfe898c0ac53bb94162f303495b75e38a31 Ben fixed a buffer overrun bug in read_data_by_inode by removing a line that forcably set a null byte at the end of the buffer passed in. When the buffer was of size 1 this would overflow. This took 2 hours to fix.
+
+In bf6a9f667247062abd383987d87fe2403ff1bcd4 Ben fixed a bug where user programs would use uninitialized memory and assume it was all 0. So if a program runs and fills in that memory and then exits and another program is run in the same physical memory it's data would not be 0. This is fixed by memsetting all of user memory to 0 in sys_execute. This took 3 hours to fix.
+
+In 3b0533d492c11ef3ab9ae3d729648dcb0b58a255 Ben fixed a bug where the wrong number of bytes would be written to the buffer in sys_getargs. This was because strlen does not include the null byte in the length. This took 1 hour to fix.
+
+In 60d409a63c1935299782efafa169cf37ec503791 Ben fixed a bug that incorrectly setup paging for video memory by using a different address depending on whether the memory was user space or kernel space. This took 4 hours to fix.
+
+In 4663ac27a83088cf0a7442eaf2b167b398b5ebbe Adam fixed a bug that broke grep when it tried to read from the rtc. He did this by returning 0 instead of -1 when nbytes was the wrong size. If grep saw a -1 it would terminate early. This took 5 minutes to fix.
+
+In 4493ef4f642c78d4de72a6da898f91477783e8e0 David fixed a bug that caused the machine to crash when a shell was exited by restarting it in sys_halt. This took 5 minutes to fix.
+
+In bf2543034400fe05e2e6f8dfcc3f1059f446eee2 Ben fixed a bug that prevented much of the screen from being seen when a terminal switch occurred because the video memory was 0'd to black on black. He fixed it by initializing the memory to the correct color. This took 7 hours to fix.
+
+In 844fc8321a728c9953f18154923a4b0a3e546f29 Ben fixed a bug where the cursor was not updated to the correct location on the screen because the routine that moved the cursor on the screen was not separate from the routine that saved the current terminals cursor position. So when the terminals switched the cursor was moved to the location of the previous terminal and not to the location of the switched to terminal. This took multiple days to fix but it wasn't our primary focus.
+
+In eea17b00a71028b4d302fef424218803e1dcb714 Ben fixed a bug in a #define that caused the wrong address to be calculated by surrounding the argument with parenthesis. This took 30 minutes to fix.
+
+In 55da867d1167bc98470d0802c96c069cef349adf Ben fixed a bug where counter would go to sleep while printing by forcing all processes that leave kbd_read to be woken up. This took 30 minutes to fix.
+
+In 5e1c6a151a62537587413f5777e7ba10984a42ec Ben fixed a few bugs related to threading. One gives control of the keyboard to the last process that reads from it, another gives each thread a unique copy of it's parents page structures instead of pointers to them directly which allows each thread to have a unique stack space. This took 30 minutes to fix.
+
+In 0b6b04a22c3745971e5a9dccaeb8dd06a1723e69 Ben fixed a bug in signals that caused the machine to crash if a signal was generated in an interrupt that interrupted kernel code. This was caused by the fact that if kernel code is interrupted a priveledge level switch is not performed so the CPU does not push the esp on the stack and perform a stack switch so sigreturn would return to the correct EIP but on the wrong stack and that would break the kernel. This is fixed by checking whether we were interrupted during kernel code (the iret_context.cs will be equal to KERNEL_CS) and saving the ebp and changing the tss if we are and then returning from this ebp in sigreturn moves us to the correct stack. This took a week to fix (maybe around 15-20 hours).
+
+In 064b1dcdf0b7e352d0f79cb25efcf49c977898fa Ben fixed a bug that prevented terminal switches or Ctrl-C from being used if the keyboard buffer was full by moving the checks for these outside of the if statement that checks for a full keyboard buffer. This took 20 minutes to fix.
+
+In e4c62fef725fd8d4ce496401f3dc4b9501ad73cd Ben fixed a bug caused reading from the RTC to be very inconsistent. This took 10 minutes to fix.
+
+In 5744f6f03317eceee28b43e086f557033536cc4f Ben fixed a bug in sys_execute/sys_close where file descriptors were not being initialized properly so consecutive processes and open->close->open sequences would break. This took 40 minutes to fix.
+
+In c16034b645654bacf621b8ad120db9a495534024 Ben fixed a bug that crashed the machine when a text file was sent to sys_execute. This happenned because the paging was switched to the child process and when it was discovered that the file was a text file the paging was not switched back to the parent when sys_execute returned. This took 5 minutes to fix.
