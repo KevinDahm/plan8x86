@@ -24,6 +24,10 @@ extern int32_t ece391_sigreturn (void);
 extern int32_t ece391_vidmap_all(uint8_t** screen_start);
 extern int32_t ece391_ioperm(uint32_t from, uint32_t num, int32_t turn_on);
 extern int32_t ece391_thread_create(uint32_t *tid, void (*thread_start)());
+extern int32_t ece391_thread_join(uint32_t tid);
+extern int32_t ece391_stat(int32_t fd, void *buf, int32_t nbytes);
+extern int32_t ece391_time();
+extern int32_t ece391_loadkeys();
 
 enum signums {
 	DIV_ZERO = 0,
@@ -32,6 +36,12 @@ enum signums {
 	ALARM,
 	USER1,
 	NUM_SIGNALS
+};
+
+enum kbd_layout {
+    QWERTY = 0,
+    DVORAK,
+    NUM_KBD_LAYOUTS
 };
 
 #endif /* ECE391SYSCALL_H */

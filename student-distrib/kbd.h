@@ -9,6 +9,14 @@
 
 #define KBD_BUFFER_SIZE 128
 
+enum kbd_layout {
+    QWERTY = 0,
+    DVORAK = 1,
+    NUM_KBD_LAYOUT
+};
+
+extern uint8_t cur_kbd_layout;
+
 // Struct for current kdb state
 typedef struct kbd {
     union {

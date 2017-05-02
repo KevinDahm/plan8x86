@@ -4,7 +4,7 @@ unknown_string:
 shell_str:
   .ascii "shell"
 system_calls_jumptable:
-  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_vidmap_all, sys_ioperm, sys_thread_create, sys_thread_join, sys_time
+  .long 0, sys_halt, sys_execute, sys_read, sys_write, sys_open, sys_close, sys_getargs, sys_vidmap, sys_set_handler, sys_sigreturn, sys_vidmap_all, sys_ioperm, sys_thread_create, sys_thread_join, sys_stat, sys_time, sys_loadkeys
 
   .text
 
@@ -116,7 +116,7 @@ system_call:
   movl $0, %esi
   cmp %eax, %esi
   je sys_call_err
-  movl $16, %esi
+  movl $18, %esi
   cmp %esi, %eax
   ja sys_call_err
   pushl %edx
