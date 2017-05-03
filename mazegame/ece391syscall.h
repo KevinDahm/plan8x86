@@ -25,7 +25,9 @@ extern int32_t vidmap_all (uint8_t **screen_start);
 extern int32_t ioperm(uint32_t from, uint32_t num, int32_t turn_on);
 extern int32_t thread_create(uint32_t *tid, void (*thread_start)());
 extern int32_t thread_join(uint32_t tid);
-extern uint32_t time();
+extern int32_t stat(int32_t fd, void *buf, int32_t nbytes);
+extern int32_t time();
+extern int32_t loadkeys();
 
 enum signums {
     DIV_ZERO = 0,

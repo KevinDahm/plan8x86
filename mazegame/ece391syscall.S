@@ -31,7 +31,9 @@ DO_CALL(vidmap_all, SYS_VIDMAP_ALL)
 DO_CALL(ioperm, SYS_IOPERM)
 DO_CALL(thread_create, SYS_THREAD_CREATE)
 DO_CALL(thread_join, SYS_THREAD_JOIN)
+DO_CALL(stat, SYS_STAT)
 DO_CALL(time, SYS_TIME)
+DO_CALL(loadkeys, SYS_LOADKEYS)
 
 
 /* Call the main() function, then halt with its return value. */
