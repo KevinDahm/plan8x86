@@ -13,7 +13,7 @@
  */
 void terminal_init() {
     //setup stdin
-    stdin_ops.open = terminal_open;
+    stdin_ops.open = stdin_open;
     stdin_ops.close = terminal_close;
     stdin_ops.write = stdin_write;
     stdin_ops.read = terminal_read;
@@ -25,7 +25,7 @@ void terminal_init() {
     stdout_ops.read = stdout_read;
 }
 
-/* void terminal_open(const int8_t* filename)
+/* int32_t terminal_open(const int8_t* filename)
  * Decription: Opens the terminal, which currently does nothing
  * Input: filename - unused
  * Output: 0 for success
@@ -35,7 +35,18 @@ int32_t terminal_open(const int8_t* filename) {
     return 0;
 }
 
-/* void terminal_close(int32_t fd)
+/* int32_t stdin_open(const int8_t* filename)
+ * Decription: Opens the terminal and clears history
+ * Input: filename - unused
+ * Output: 0 for success
+ * Side Effects: None
+ */
+int32_t stdin_open(const int8_t* filename) {
+    clear_hist();
+    return 0;
+}
+
+/* int32_t terminal_close(int32_t fd)
  * Decription: Closes the terminal, which currently does nothing
  * Input: fd - unused
  * Output: 0 for success
@@ -106,6 +117,9 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     memset(buf, 0, nbytes);
     startx = get_cursor_x();
     starty = get_cursor_y();
+    hist[cur_task].read_index = hist[cur_task].write_index;
+    hist[cur_task].capped = !hist[cur_task].completed && hist[cur_task].write_index == 0;
+
     while (true) { //Keep reading
         if (kbd_read(0, &k, 2)) { //Read a single key
             if(kbd_to_ascii(k) == 'l' && k.ctrl) { //Reset the screen
@@ -192,7 +206,18 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     ((uint8_t*)buf)[total] = a;
                     total++;
                     putc(a);
+                    hist[cur_task].size[hist[cur_task].write_index] = total-1;
+                }else{
+                    hist[cur_task].size[hist[cur_task].write_index] = total;
                 }
+
+                memcpy(&hist[cur_task].history[hist[cur_task].write_index], buf, total);
+
+                if(++hist[cur_task].write_index == HIST_LENGTH){
+                    hist[cur_task].write_index = 0;
+                    hist[cur_task].completed = true;
+                }
+
                 return total;
             } else if (kbd_equal(k,TAB_KEY) && total < nbytes) { // We write a tab as 4 spaces
                 memmove(buf + i + 1, buf + i, total-i);
@@ -218,7 +243,42 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     move_hor(-x);
                     i--;
                 }
-            } else if (!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
+            } else if (kbd_equal(k, UP_KEY) || (kbd_to_ascii(k) == 'p' && k.ctrl)) {
+                if(!hist[cur_task].capped){
+                    pclear(startx, starty, endx, endy);
+                    set_cursor(startx, starty);
+                    if(--hist[cur_task].read_index < 0){
+                        hist[cur_task].read_index += HIST_LENGTH;
+                    }
+                    total = hist[cur_task].size[hist[cur_task].read_index];
+                    memcpy(buf, hist[cur_task].history[hist[cur_task].read_index], total);
+                    terminal_write(1, buf, total);
+                    endx = get_cursor_x();
+                    endy = get_cursor_y();
+                    i = total;
+                    if(hist[cur_task].read_index == hist[cur_task].write_index
+                       || (hist[cur_task].read_index == 0 && !hist[cur_task].completed)){
+                        hist[cur_task].capped = true;
+
+                    }
+                }
+            } else if (kbd_equal(k, DOWN_KEY) || (kbd_to_ascii(k) == 'n' && k.ctrl)) {
+                if((hist[cur_task].capped || (hist[cur_task].read_index != hist[cur_task].write_index)) && (hist[cur_task].read_index < HIST_LENGTH - 1 || hist[cur_task].completed)){
+                    pclear(startx, starty, endx, endy);
+                    set_cursor(startx, starty);
+                    if(++hist[cur_task].read_index == HIST_LENGTH){
+                        hist[cur_task].read_index = 0;
+                    }
+                    total = hist[cur_task].size[hist[cur_task].read_index];
+                    memcpy(buf, hist[cur_task].history[hist[cur_task].read_index], total);
+                    terminal_write(1, buf, total);
+                    endx = get_cursor_x();
+                    endy = get_cursor_y();
+                    i = total;
+                    hist[cur_task].capped = false;
+                }
+
+            }else if (!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
                 //not a special character, just write it to the screen
                 memmove(buf + i + 1, buf + i, total-i);
                 ((uint8_t*)buf)[i] = a;
@@ -235,4 +295,8 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
         }
     }
     return total;
+}
+
+void clear_hist(){
+    memset(&hist[cur_task], 0, sizeof(hist_t));
 }
