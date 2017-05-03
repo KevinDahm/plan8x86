@@ -18,7 +18,14 @@ extern int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
 
 //removes a character from the console
-void removec();
+void removec(uint32_t num);
+
+void move_hor(int32_t dist);
+
+uint32_t get_cursor_x();
+uint32_t get_cursor_y();
+
+void get_video(uint8_t* buf, uint32_t start, uint32_t starty, uint32_t length);
 
 //Output a string to the console
 int32_t puts(int8_t *s);
@@ -35,6 +42,8 @@ uint32_t strlen(const int8_t* s);
 //Clears videdo memory
 void clear(void);
 
+void pclear(uint32_t startx, uint32_t starty, uint32_t endx, uint32_t endy);
+
 //Clears video memory, sets the color to blue, and resets the cursor
 void blue_screen(void);
 
@@ -48,7 +57,7 @@ void set_cursor(uint32_t x, uint32_t y);
 void set_color(uint8_t col);
 
 //Moves everything in the console up one row
-void move_up();
+void move_up(int32_t dist);
 
 //Switches the active terminal
 void update_screen(uint32_t terminal);
