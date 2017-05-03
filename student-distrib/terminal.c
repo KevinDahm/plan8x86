@@ -243,7 +243,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     move_hor(-x);
                     i--;
                 }
-            } else if (kbd_equal(k, UP_KEY)) {
+            } else if (kbd_equal(k, UP_KEY) || (kbd_to_ascii(k) == 'p' && k.ctrl)) {
                 if(!hist[cur_task].capped){
                     pclear(startx, starty, endx, endy);
                     set_cursor(startx, starty);
@@ -262,7 +262,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
 
                     }
                 }
-            } else if (kbd_equal(k, DOWN_KEY)) {
+            } else if (kbd_equal(k, DOWN_KEY) || (kbd_to_ascii(k) == 'n' && k.ctrl)) {
                 if((hist[cur_task].capped || (hist[cur_task].read_index != hist[cur_task].write_index)) && (hist[cur_task].read_index < HIST_LENGTH - 1 || hist[cur_task].completed)){
                     pclear(startx, starty, endx, endy);
                     set_cursor(startx, starty);
@@ -275,6 +275,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     endx = get_cursor_x();
                     endy = get_cursor_y();
                     i = total;
+                    hist[cur_task].capped = false;
                 }
 
             }else if (!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
