@@ -97,11 +97,11 @@ static void update_status_bar(){
     /*Form appropriate string*/
     time %= 3600;
     char str[] = {
-        'L', 'e', 'v', 'e', 'l', ' ', lev + 0x30,
-        ' ', ' ', ' ', fruit + 0x30, ' ',
+        'L', 'e', 'v', 'e', 'l', ' ', lev + '0',
+        ' ', ' ', ' ', fruit + '0', ' ',
         'F', 'r', 'u', 'i', 't', 's', ' ', ' ', ' ',
-        time/600+0x30, (time/60)%10+0x30, ':',
-        (time%60)/10+0x30, time%10+0x30, 0
+        time/600+'0', (time/60)%10+'0', ':',
+        (time%60)/10+'0', time%10+'0', 0
     };
 
     /* char s = time + 0x30; */
@@ -547,7 +547,7 @@ static void rtc_thread() {
  */
 static void keyboard_thread()
 {
-    int kbd_fd = open("/dev/kbd");
+    int kbd_fd = open((uint8_t*)"/dev/kbd");
     int16_t key;
     // Break only on win or quit input - '`'
     while (winner == 0 && quit_flag == 0)
