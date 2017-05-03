@@ -247,7 +247,7 @@ void _kbd_do_irq(int dev_id) {
 
     int f;
     for (f = 0; f < NUM_TERM; f++) {
-        if (kbd_equal(kbd_state, f + F1_KEY) && kbd_state.alt) {
+        if (kbd_equal(kbd_state, f + F1_KEY)) {
             update_screen(f);
             break;
         }

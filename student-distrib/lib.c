@@ -98,6 +98,7 @@ void blue_screen(void) {
  */
 
 void update_screen(uint32_t terminal) {
+    cli();
     if(terminal >= NUM_TERM || terminal == active){
         return;
     }
@@ -121,6 +122,7 @@ void update_screen(uint32_t terminal) {
     memcpy((void *)VIDEO, terminal_video[active], KB4);
 
     update_cursor();
+    sti();
 }
 
 /*
