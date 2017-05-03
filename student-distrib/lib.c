@@ -36,7 +36,7 @@ void video_init() {
 
 /*
  * uint8_t *get_video_mem()
- *   Inputs: void
+ *   Inputs: void+
  *   Return Value: pointer to video memory
  *   Function: Returns a pointer to video memory of the current task
  */
@@ -48,6 +48,14 @@ uint8_t *get_video_mem() {
     }
 }
 
+void get_video(uint8_t* buf, uint32_t startx, uint32_t starty, uint32_t length){
+    uint32_t i;
+    for(i = 0; i < length; i++){
+        buf[i] = *(uint8_t *)(get_video_mem() + startx*2 + i*2 + starty*NUM_COLS*2);
+    }
+}
+
+
 /*
  * void clear(void)
  *   Inputs: void
@@ -57,6 +65,14 @@ uint8_t *get_video_mem() {
 void clear(void) {
     int32_t i;
     for(i = 0; i < NUM_COLS * NUM_ROWS; i++) {
+        *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
+        *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
+    }
+}
+
+void pclear(uint32_t startx, uint32_t starty, uint32_t endx, uint32_t endy){
+    int32_t i;
+    for(i = startx + NUM_COLS*starty; i < NUM_COLS * endy + endx; i++) {
         *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
         *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
     }
@@ -140,6 +156,13 @@ void set_cursor(uint32_t x, uint32_t y) {
     update_cursor();
 }
 
+uint32_t get_cursor_x(){
+    return term_x[TASK_T];
+}
+
+uint32_t get_cursor_y(){
+    return term_y[TASK_T];
+}
 /*
  * void set_color(col)
  *   Inputs: col - Color to use
@@ -156,14 +179,28 @@ void set_color(uint8_t col) {
  *   Return Value: none
  *   Function: Moves everything in the console up one row
  */
-void move_up() {
-    int i;
-    term_y[TASK_T]--;
-    memmove((void*)get_video_mem(), (void*)(get_video_mem() + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
-    for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
-        *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
+void move_up(int32_t dist) {
+    int j = 0;
+    while(j < dist){
+        int i;
+        term_y[TASK_T]--;
+        memmove((void*)get_video_mem(), (void*)(get_video_mem() + NUM_COLS*2), (NUM_COLS * (NUM_ROWS-1))*2);
+        for(i=NUM_COLS*(NUM_ROWS-1); i<NUM_ROWS*NUM_COLS; i++) {
+            *(uint8_t *)(get_video_mem() + (i << 1)) = ' ';
+            *(uint8_t *)(get_video_mem() + (i << 1) + 1) = color[TASK_T];
+        }
+        j++;
     }
+    update_cursor();
+}
+
+void move_hor(int32_t dist) {
+    term_x[TASK_T]+=dist;
+    term_y[TASK_T] = term_y[TASK_T] + (term_x[TASK_T] / NUM_COLS);
+    while (term_y[TASK_T] >= NUM_ROWS)
+        move_up(1);
+    term_x[TASK_T] %= NUM_COLS;
+    update_cursor();
 }
 /* Standard printf().
  * Only supports the following format strings:
@@ -320,8 +357,9 @@ void putc(uint8_t c) {
         term_y[TASK_T]++;
         term_x[TASK_T] = 0;
         if(term_y[TASK_T] == NUM_ROWS){
-            move_up();
+            move_up(1);
         }
+        update_cursor();
     } else if(c == '\t'){
         for(i = 0; i < TAB_SIZE; i++){
             putc(' ');
@@ -329,14 +367,10 @@ void putc(uint8_t c) {
     }else {
         *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = c;
         *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
-        term_x[TASK_T]++;
-        term_y[TASK_T] = term_y[TASK_T] + (term_x[TASK_T] / NUM_COLS);
-        if (term_y[TASK_T] == NUM_ROWS)
-            move_up();
-        term_x[TASK_T] %= NUM_COLS;
+        move_hor(1);
 
     }
-    update_cursor();
+
 }
 
 /*
@@ -345,18 +379,17 @@ void putc(uint8_t c) {
  *   Return Value: void
  *   Function: removes a character from the console
  */
-void removec() {
-    if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
-        return;
-    term_x[TASK_T]--;
-    if(term_x[TASK_T] == -1) {
-        term_y[TASK_T]--;
-        term_x[TASK_T] += NUM_COLS;
+void removec(uint32_t num) {
+    uint32_t i = 0;
+    while(i < num){
+        if(term_x[TASK_T] == 0 && term_y[TASK_T] == 0)
+            return;
+        move_hor(-1);
+        *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = ' ';
+        *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
+        i++;
     }
-    *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1)) = ' ';
-    *(uint8_t *)(get_video_mem() + ((NUM_COLS*(term_y[TASK_T]) + term_x[TASK_T]) << 1) + 1) = color[TASK_T];
 
-    update_cursor();
 }
 
 /*
