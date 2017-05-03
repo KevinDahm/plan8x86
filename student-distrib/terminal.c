@@ -107,10 +107,10 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
     startx = get_cursor_x();
     starty = get_cursor_y();
     while (true) { //Keep reading
-        if (kbd_read(0, &k, 2)){ //Read a single key
-            if(kbd_equal(k, L_KEY) && k.ctrl) { //Reset the screen
+        if (kbd_read(0, &k, 2)) { //Read a single key
+            if(kbd_to_ascii(k) == 'l' && k.ctrl) { //Reset the screen
                 uint8_t temp[startx];
-                for(j = 0; j < startx; j++){
+                for (j = 0; j < startx; j++) {
                     get_video(temp, 0, starty, startx);
                 }
                 uint32_t x = get_cursor_x();
@@ -122,18 +122,18 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                 set_cursor(x, y - starty);
                 endy -= starty;
                 starty = 0;
-            } else if(k.ctrl && kbd_equal(k, K_KEY)){
+            } else if (k.ctrl && kbd_to_ascii(k) == 'k') {
                 total = i;
                 pclear(get_cursor_x(), get_cursor_y(), endx, endy);
                 endx = get_cursor_x();
                 endy = get_cursor_y();
-            } else if(k.ctrl && kbd_equal(k, A_KEY)){
+            } else if (k.ctrl && kbd_to_ascii(k) == 'a') {
                 i = 0;
                 set_cursor(startx, starty);
-            } else if(k.ctrl && kbd_equal(k, E_KEY)){
+            } else if (k.ctrl && kbd_to_ascii(k) == 'e') {
                 i = total;
                 set_cursor(endx, endy);
-            }else if(kbd_equal(k, BKSP_KEY)) { //Delete the previous character
+            } else if (kbd_equal(k, BKSP_KEY)) { //Delete the previous character
                 if (i > 0) {
                     a = ((uint8_t*)buf)[i-1];
                     memmove(buf + i - 1, buf + i, total-i);
@@ -154,8 +154,8 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     set_cursor(x, y);
 
                 }
-            } else if(kbd_equal(k, DEL_KEY)){
-                if(i < total){
+            } else if (kbd_equal(k, DEL_KEY) || (kbd_to_ascii(k) == 'd' && k.ctrl)) {
+                if (i < total) {
                     //move right
                     int32_t h = ((uint8_t*)buf)[i] == '\t' ? 4 : 1;
                     move_hor(h);
@@ -163,10 +163,10 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     //delete
                     a = ((uint8_t*)buf)[i-1];
                     memmove(buf + i - 1, buf + i, total-i);
-                    if(a == '\t'){
+                    if (a == '\t') {
                         removec(4);
                         ((uint8_t*)buf)[total-1] = '\t';
-                    }else{
+                    } else {
                         removec(1);
                         ((uint8_t*)buf)[total-1] = 0;
                     }
@@ -179,22 +179,22 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     endy = get_cursor_y();
                     set_cursor(x, y);
                 }
-            } else if(kbd_equal(k, ESC_KEY)){
+            } else if (kbd_equal(k, ESC_KEY)) {
                 total = 0;
                 i = 0;
                 pclear(startx, starty, endx, endy);
                 set_cursor(startx, starty);
                 endx = startx;
                 endy = starty;
-            }else if(kbd_equal(k, ENTER)) { //Write a newline and return
-                if(total != nbytes){
+            } else if (kbd_equal(k, ENTER)) { //Write a newline and return
+                if (total != nbytes) {
                     a = '\n';
                     ((uint8_t*)buf)[total] = a;
                     total++;
                     putc(a);
                 }
                 return total;
-            } else if(kbd_equal(k,TAB_KEY) && total < nbytes){// We write a tab as 4 spaces
+            } else if (kbd_equal(k,TAB_KEY) && total < nbytes) { // We write a tab as 4 spaces
                 memmove(buf + i + 1, buf + i, total-i);
                 ((uint8_t*)buf)[i] = '\t';
                 total++;
@@ -206,21 +206,19 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                 set_cursor(x, y);
                 move_hor(4);
                 i++;
-
-
-            } else if (kbd_equal(k, RIGHT_KEY)){
-                if(total > i){
+            } else if (kbd_equal(k, RIGHT_KEY) || (kbd_to_ascii(k) == 'f' && k.ctrl)) {
+                if(total > i) {
                     int32_t x = ((uint8_t*)buf)[i] == '\t' ? 4 : 1;
                     move_hor(x);
                     i++;
                 }
-            } else if(kbd_equal(k, LEFT_KEY)){
-                if(i > 0){
+            } else if (kbd_equal(k, LEFT_KEY) || (kbd_to_ascii(k) == 'b' && k.ctrl)) {
+                if(i > 0) {
                     int32_t x = ((uint8_t*)buf)[i-1] == '\t' ? 4 : 1;
                     move_hor(-x);
                     i--;
                 }
-            }else if(!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
+            } else if (!k.ctrl && (a = kbd_to_ascii(k)) != '\0' && total < nbytes) {
                 //not a special character, just write it to the screen
                 memmove(buf + i + 1, buf + i, total-i);
                 ((uint8_t*)buf)[i] = a;
