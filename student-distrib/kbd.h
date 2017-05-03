@@ -108,6 +108,8 @@ extern int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes);
 #define TAB_KEY 0x40
 #define RIGHT_KEY 0xA3
 #define LEFT_KEY 0xA1
+#define UP_KEY 0x8A
+#define DOWN_KEY 0xA2
 #define DEL_KEY 0x4C
 
 
