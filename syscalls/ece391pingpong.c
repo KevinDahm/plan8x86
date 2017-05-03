@@ -16,16 +16,17 @@ int main ()
 {
     int32_t i = 0;
     int32_t j = 0;
+    int32_t k = 0;
     uint8_t curchar = STARTCHAR;
     uint8_t update = 1;
     int ret_val;
     int garbage;
     int rtc_fd;
     uint8_t buf[BUFMAX];
-    
+
     // Clear buffer
     for(i = 0; i < BUFMAX; i++)
-	    buf[i]=' ';
+        buf[i]=' ';
 
     // Initialize buffer with walls
     buf[BUFMAX-1]='\0';
@@ -35,7 +36,21 @@ int main ()
 
     // Open and set RTC Frequency
     rtc_fd = ece391_open((uint8_t*)"rtc");
-    ret_val = 32;
+    uint8_t x[5];
+    if(!ece391_getargs(x, 5)){
+        ece391_strrev(x);
+        for(i = 0; i < 5; i++){
+            if((j = (x[i]-0x30)) < 0 || j >= 10)
+                break;
+            for(k = 0; k < i; k++){
+                j = j * 10;
+            }
+            ret_val += j;
+        }
+    }else{
+        ret_val = 32;
+    }
+
     ret_val = ece391_write(rtc_fd, &ret_val, 4);
 
     while(1)
@@ -43,46 +58,46 @@ int main ()
 	// Move out
 	for(j = STARTLOOP; j < LOOPMAX; j++)
 	{
-		// Clear inner portion of world
-		for(i = STARTLOOP; i < LOOPMAX; i++)
-		{
-			buf[i]=' ';
-		}
+            // Clear inner portion of world
+            for(i = STARTLOOP; i < LOOPMAX; i++)
+            {
+                buf[i]=' ';
+            }
 
-		// Draw character
-		buf[j] = curchar;
-		ece391_fdputs (1, buf);
+            // Draw character
+            buf[j] = curchar;
+            ece391_fdputs (1, buf);
 
-		// Wait for RTC tick
-		ece391_read(rtc_fd, &garbage, 4);
+            // Wait for RTC tick
+            ece391_read(rtc_fd, &garbage, 4);
 	}
-	
+
 	// Bounce back
     	for(j = LOOPMAX - 1; j >= STARTLOOP; j--)
     	{
-		// Clear inner portion of the world
-		for(i = STARTLOOP; i < LOOPMAX; i++)
-		{
-			buf[i]=' ';
-		}
+            // Clear inner portion of the world
+            for(i = STARTLOOP; i < LOOPMAX; i++)
+            {
+                buf[i]=' ';
+            }
 
-		// Draw character
-		buf[j] = curchar;
-		ece391_fdputs (1, buf);
+            // Draw character
+            buf[j] = curchar;
+            ece391_fdputs (1, buf);
 
-		// Wait for RTC tick
-		ece391_read(rtc_fd, &garbage, 4);
+            // Wait for RTC tick
+            ece391_read(rtc_fd, &garbage, 4);
     	}
 
 	// Edge case on characters
 	if(curchar == ENDCHAR)
 	{
-		curchar = STARTCHAR;
+            curchar = STARTCHAR;
 	}
 	else
 	{
-		// Update current character
-		curchar = curchar + update;
+            // Update current character
+            curchar = curchar + update;
 	}
     }
     return 0;
