@@ -139,18 +139,18 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     memmove(buf + i - 1, buf + i, total-i);
                     if(a == '\t'){
                         removec(4);
-                        ((uint8_t*)buf)[total-1] = '\t';
                     }else{
                         removec(1);
-                        ((uint8_t*)buf)[total-1] = 0;
+                        a = ' ';
                     }
                     total--;
                     i--;
                     uint32_t x = get_cursor_x();
                     uint32_t y = get_cursor_y();
-                    terminal_write(1, buf + i, total - i + 1);
+                    terminal_write(1, buf + i, total - i);
                     endx = get_cursor_x();
                     endy = get_cursor_y();
+                    putc(a); //clear leftover garbage
                     set_cursor(x, y);
 
                 }
@@ -165,18 +165,18 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes) {
                     memmove(buf + i - 1, buf + i, total-i);
                     if (a == '\t') {
                         removec(4);
-                        ((uint8_t*)buf)[total-1] = '\t';
                     } else {
                         removec(1);
-                        ((uint8_t*)buf)[total-1] = 0;
+                        a = ' ';
                     }
                     total--;
                     i--;
                     uint32_t x = get_cursor_x();
                     uint32_t y = get_cursor_y();
-                    terminal_write(1, buf + i, total - i + 1);
+                    terminal_write(1, buf + i, total - i);
                     endx = get_cursor_x();
                     endy = get_cursor_y();
+                    putc(a);//clear up garbage
                     set_cursor(x, y);
                 }
             } else if (kbd_equal(k, ESC_KEY)) {
