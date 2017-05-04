@@ -678,11 +678,3 @@ int32_t sys_stat(int32_t fd, void* buf, int32_t nbytes) {
 uint32_t sys_time(){
     return get_time();
 }
-
-uint32_t sys_loadkeys(int32_t kbd_layout) {
-    if (kbd_layout < 0 || kbd_layout > NUM_KBD_LAYOUT) {
-        return -1;
-    }
-    cur_kbd_layout = kbd_layout;
-    return 0;
-}

@@ -33,7 +33,6 @@ DO_CALL(ece391_thread_create, SYS_THREAD_CREATE)
 DO_CALL(ece391_thread_join, SYS_THREAD_JOIN)
 DO_CALL(ece391_stat, SYS_STAT)
 DO_CALL(ece391_time, SYS_TIME)
-DO_CALL(ece391_loadkeys, SYS_LOADKEYS)
 
 
 /* Call the main() function, then halt with its return value. */

@@ -342,7 +342,15 @@ int32_t kbd_close(int32_t fd) {
  * Side effects: none
  */
 int32_t kbd_write(int32_t fd, const void* buf, int32_t nbytes) {
-    return -1;
+    if (nbytes != 4) {
+        return -1;
+    }
+    uint32_t kbd_l = *(uint32_t *)buf;
+    if (kbd_l < 0 || kbd_l > NUM_KBD_LAYOUT) {
+        return -1;
+    }
+    cur_kbd_layout = kbd_l;
+    return 0;
 }
 
 /* int32_t kbd_read(int32_t fd, void* buf, int32_t nbytes)

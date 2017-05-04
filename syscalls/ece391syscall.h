@@ -27,7 +27,6 @@ extern int32_t ece391_thread_create(uint32_t *tid, void (*thread_start)());
 extern int32_t ece391_thread_join(uint32_t tid);
 extern int32_t ece391_stat(int32_t fd, void *buf, int32_t nbytes);
 extern int32_t ece391_time();
-extern int32_t ece391_loadkeys();
 
 enum signums {
 	DIV_ZERO = 0,

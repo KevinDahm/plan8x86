@@ -17,6 +17,5 @@
 #define SYS_THREAD_JOIN 14
 #define SYS_STAT 15
 #define SYS_TIME 16
-#define SYS_LOADKEYS 17
 
 #endif /* ECE391SYSNUM_H */
