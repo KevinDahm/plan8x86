@@ -600,7 +600,7 @@ int main() {
     set_handler(INTERRUPT, exit);
 
     fd = open((uint8_t *)"rtc");
-    int x = 64;
+    int x = 128;
     write(fd, &x, 4);
 
     uint32_t tid1;
